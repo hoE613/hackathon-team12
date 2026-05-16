@@ -1,27 +1,6 @@
 import { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import {
-  Bell,
-  Search,
-  Home,
-  Grid3X3,
-  Trophy,
-  User,
-  PlusCircle,
-  X,
-  Send,
-  Sparkles,
-  Minimize2,
-  Menu,
-} from "lucide-react";
-
-const navs = [
-  { label: "홈", path: "/", icon: Home },
-  { label: "카테고리", path: "/category", icon: Grid3X3 },
-  { label: "맛집 등록", path: "/register", icon: PlusCircle },
-  { label: "쩝쩝 랭킹", path: "/ranking", icon: Trophy },
-  { label: "마이페이지", path: "/my", icon: User },
-];
+import { Bell, Search, X, Send, Sparkles, Minimize2, Menu } from "lucide-react";
 
 export default function AppLayout() {
   const navigate = useNavigate();
@@ -86,62 +65,37 @@ export default function AppLayout() {
     setAssistantMinimized(false);
   };
 
-  const closeMobileMenu = () => {
+  const goPage = (path) => {
+    navigate(path);
     setMobileMenuOpen(false);
   };
 
   return (
     <div className="app-shell">
-      <aside className="left-sidebar">
-        <button
-          className="brand large brand-button"
-          onClick={() => navigate("/")}
-        >
-          🧑‍🍳 <b>쩝쩝박사</b>
-        </button>
-
-        <div className="mascot-card">
-          <div className="mascot">🧑‍🍳</div>
-          <h2>쩝쩝박사</h2>
-          <p>가천대 맛집, 우리가 리뷰한다! 🧡</p>
-        </div>
-
-        <nav className="side-nav">
-          {navs.map(({ label, path, icon: Icon }) => (
-            <NavLink key={path} to={path}>
-              <Icon size={19} />
-              <span>{label}</span>
-            </NavLink>
-          ))}
-        </nav>
-
-        <button className="guide-card" onClick={() => navigate("/verified")}>
-          <b>✨ 인증 맛집이란?</b>
-          <span>영수증 인증을 완료한 맛집이에요!</span>
-          <em>자세히 보기</em>
-        </button>
-      </aside>
-
       <main className="main-area">
         <header className={`topbar ${scrolled ? "topbar-scrolled" : ""}`}>
           <button
-            className="mobile-menu-button"
+            className="mobile-menu-toggle"
             onClick={() => setMobileMenuOpen(true)}
+            aria-label="메뉴 열기"
           >
-            <Menu size={24} />
-          </button>
-
-          <button className="mobile-logo" onClick={() => navigate("/")}>
-            🧑‍🍳 쩝쩝박사
+            <Menu size={22} />
           </button>
 
           <nav className="desktop-nav">
-            <NavLink to="/">홈</NavLink>
+            <NavLink to="/" className="brand-nav-link">
+              쩝쩝박사
+            </NavLink>
+
             <NavLink to="/search">맛집</NavLink>
             <NavLink to="/ranking">랭킹</NavLink>
-            <NavLink to="/review/new">리뷰 작성</NavLink>
+            <NavLink to="/posts">게시글</NavLink>
             <NavLink to="/my">마이페이지</NavLink>
           </nav>
+
+          <button className="mobile-logo" onClick={() => navigate("/")}>
+            쩝쩝박사
+          </button>
 
           <div className="search-box">
             <Search size={18} />
@@ -152,7 +106,7 @@ export default function AppLayout() {
             />
           </div>
 
-          <button className="icon-button">
+          <button className="icon-button" aria-label="알림">
             <Bell size={20} />
           </button>
 
@@ -164,6 +118,44 @@ export default function AppLayout() {
 
         <Outlet />
       </main>
+
+      {mobileMenuOpen && (
+        <div
+          className="mobile-menu-dim"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <aside
+            className="mobile-menu-panel"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mobile-menu-head">
+              <b>쩝쩝박사</b>
+
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="메뉴 닫기"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            <nav className="mobile-menu-list">
+              <button onClick={() => goPage("/")}>홈</button>
+              <button onClick={() => goPage("/search")}>맛집</button>
+              <button onClick={() => goPage("/ranking")}>랭킹</button>
+              <button onClick={() => goPage("/posts")}>게시글</button>
+              <button onClick={() => goPage("/my")}>마이페이지</button>
+            </nav>
+
+            <button
+              className="mobile-menu-write"
+              onClick={() => goPage("/review/new")}
+            >
+              게시글 작성하기
+            </button>
+          </aside>
+        </div>
+      )}
 
       {assistantOpen && !assistantMinimized && (
         <div className="assistant-chat">
@@ -238,58 +230,6 @@ export default function AppLayout() {
           <span>🤖</span>
           <b>쩝쩝비서</b>
         </button>
-      )}
-
-      {mobileMenuOpen && (
-        <div className="mobile-menu-overlay" onClick={closeMobileMenu}>
-          <aside
-            className="mobile-side-menu"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="brand large brand-button"
-              onClick={() => {
-                navigate("/");
-                closeMobileMenu();
-              }}
-            >
-              🧑‍🍳 <b>쩝쩝박사</b>
-            </button>
-
-            <div className="mascot-card">
-              <div className="mascot">🧑‍🍳</div>
-              <h2>쩝쩝박사</h2>
-              <p>가천대 맛집, 우리가 리뷰한다! 🧡</p>
-            </div>
-
-            <nav className="side-nav">
-              {navs.map(({ label, path, icon: Icon }) => (
-                <button
-                  key={path}
-                  onClick={() => {
-                    navigate(path);
-                    closeMobileMenu();
-                  }}
-                >
-                  <Icon size={19} />
-                  <span>{label}</span>
-                </button>
-              ))}
-            </nav>
-
-            <button
-              className="guide-card"
-              onClick={() => {
-                navigate("/verified");
-                closeMobileMenu();
-              }}
-            >
-              <b>✨ 인증 맛집이란?</b>
-              <span>영수증 인증을 완료한 맛집이에요!</span>
-              <em>자세히 보기</em>
-            </button>
-          </aside>
-        </div>
       )}
     </div>
   );

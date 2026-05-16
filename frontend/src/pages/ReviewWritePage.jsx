@@ -5,48 +5,48 @@ export default function ReviewWritePage() {
 
   return (
     <section className="panel form-page">
-      <h1>글 작성</h1>
+      <h1>게시글 작성</h1>
 
-      <p>백엔드 연결 전까지는 입력 화면만 구성합니다.</p>
-
-      <div className="photo-row">
-        <span>🍽️</span>
-        <span>🍝</span>
-        <span>🥘</span>
-
-        <button>＋</button>
-      </div>
+      <p>자유롭게 맛집 정보, 질문, 추천 글을 작성하는 페이지입니다.</p>
 
       <label>
-        가게 이름
-        <input placeholder="가게 이름을 입력해주세요" />
+        게시글 제목
+        <input placeholder="제목을 입력해주세요" />
       </label>
 
       <label>
-        카테고리
+        게시글 유형
         <select>
-          <option>한식</option>
-          <option>양식</option>
-          <option>카페</option>
+          <option>자유글</option>
+          <option>맛집 추천</option>
+          <option>질문</option>
+          <option>같이 먹어요</option>
         </select>
       </label>
 
       <label>
-        위치
-        <input placeholder="가천대역 근처" />
+        내용
+        <textarea placeholder="게시글 내용을 입력해주세요" />
       </label>
 
       <label>
-        별점
-        <div className="stars">★★★★★</div>
+        관련 맛집 선택
+        <input placeholder="관련 맛집을 입력하거나 검색해주세요" />
       </label>
 
       <label>
-        추천 이유
-        <textarea placeholder="맛집에 대한 추천 이유를 작성해주세요 :)" />
+        태그
+        <input placeholder="#가성비 #혼밥 #데이트" />
       </label>
 
-      <label className="file-box">📷 영수증 인증 / 사진 업로드</label>
+      <div className="photo-row">
+        <span>🖼️</span>
+        <span>🍽️</span>
+        <span>📷</span>
+        <button>＋</button>
+      </div>
+
+      <label className="file-box">📎 사진 첨부</label>
 
       <button className="primary" onClick={() => navigate("/")}>
         등록

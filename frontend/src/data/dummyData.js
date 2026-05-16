@@ -199,6 +199,18 @@ export const activities = [
     date: "05.20",
     image: restaurants[2].image,
   },
+  {
+    restaurant: "보니또 파스타",
+
+    rating: 4.5,
+
+    comment: 6,
+
+    date: "05.19",
+
+    image:
+      "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=300&q=80",
+  },
 ];
 export const fullRankings = Array.from({ length: 100 }, (_, index) => {
   const baseNames = [

@@ -1,9 +1,14 @@
 import { useNavigate } from "react-router-dom";
-
 import { user, activities } from "../data/dummyData";
 
 export default function MyPage() {
   const navigate = useNavigate();
+
+  const myStats = user.stats.map((s) =>
+    s.label === "내가 쓴 글"
+      ? { ...s, label: "북마크", icon: "🔖", path: "/my/saved" }
+      : s
+  );
 
   return (
     <section className="my-page refined-my-page">
@@ -42,7 +47,7 @@ export default function MyPage() {
         </div>
 
         <div className="my-stat-grid">
-          {user.stats.map((s) => (
+          {myStats.map((s) => (
             <button key={s.label} onClick={() => navigate(s.path)}>
               <span>{s.icon}</span>
               <b>{s.label}</b>
