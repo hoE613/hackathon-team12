@@ -2832,3 +2832,118 @@ button {
     color: #ff6b00;
   }
 }
+.icon-button {
+  width: 46px;
+  height: 46px;
+  border-left: none;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  transition: all 0.2s ease;
+}
+
+.icon-button:hover {
+  background: #fff0e2;
+  color: #ff6b00;
+  transform: translateY(-2px);
+}
+
+.topbar {
+  align-items: center;
+}
+
+@media (max-width: 1180px) {
+  .icon-button {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: #fff;
+    border: 1px solid #f1e2d6;
+  }
+}
+.hall-ranking-scroll {
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.hall-ranking-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.hall-ranking-scroll::-webkit-scrollbar-thumb {
+  background: #ffd0ad;
+  border-radius: 999px;
+}
+
+.hall-ranking-scroll::-webkit-scrollbar-track {
+  background: #fff4ea;
+  border-radius: 999px;
+}
+
+.hall-row.rank-1,
+.hall-row.rank-2,
+.hall-row.rank-3 {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 170, 80, 0.45);
+}
+
+.hall-row.rank-1 {
+  background: linear-gradient(90deg, #fff1b8, #fff8f1);
+}
+
+.hall-row.rank-2 {
+  background: linear-gradient(90deg, #eeeeee, #fff8f1);
+}
+
+.hall-row.rank-3 {
+  background: linear-gradient(90deg, #ffe0bc, #fff8f1);
+}
+
+.hall-row.rank-1::before,
+.hall-row.rank-2::before,
+.hall-row.rank-3::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -130%;
+  width: 70%;
+  height: 100%;
+  background: linear-gradient(
+    115deg,
+    transparent,
+    rgba(255, 255, 255, 0.75),
+    transparent
+  );
+  transform: skewX(-18deg);
+}
+
+.hall-row.rank-1:hover::before,
+.hall-row.rank-2:hover::before,
+.hall-row.rank-3:hover::before {
+  animation: hallShine 0.8s ease forwards;
+}
+
+.hall-row.rank-1:hover,
+.hall-row.rank-2:hover,
+.hall-row.rank-3:hover {
+  transform: translateX(10px) scale(1.01);
+  box-shadow: 0 14px 30px rgba(255, 111, 0, 0.2);
+}
+
+.hall-row.rank-1 .hall-rank-number {
+  background: #ffd35a;
+  color: #fff;
+}
+
+.hall-row.rank-2 .hall-rank-number {
+  background: #bfc3c9;
+  color: #fff;
+}
+
+.hall-row.rank-3 .hall-rank-number {
+  background: #d99552;
+  color: #fff;
+}

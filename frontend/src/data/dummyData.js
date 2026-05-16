@@ -200,3 +200,28 @@ export const activities = [
     image: restaurants[2].image,
   },
 ];
+export const fullRankings = Array.from({ length: 100 }, (_, index) => {
+  const baseNames = [
+    "쩝쩝박사",
+    "미식의 신",
+    "맛집헌터",
+    "학식헌터",
+    "맛잘알",
+    "분식러버",
+    "카페요정",
+    "야식대장",
+    "혼밥마스터",
+    "가성비왕",
+  ];
+
+  const icons = ["🧑‍🍳", "🧑🏻‍💼", "👩‍🍳", "🦸", "🧑", "🍜", "☕", "🌙", "🍚", "🔥"];
+
+  const rank = index + 1;
+
+  return {
+    rank,
+    name: rank <= 10 ? baseNames[index] : `쩝쩝러 ${rank}`,
+    kg: Math.max(10, 128 - index),
+    icon: icons[index % icons.length],
+  };
+});

@@ -1,15 +1,14 @@
-import { rankings } from "../data/dummyData";
+import { fullRankings } from "../data/dummyData";
 
 export default function RankingPage() {
-  const topThree = rankings.slice(0, 3);
-  const rest = rankings.slice(3);
+  const topThree = fullRankings.slice(0, 3);
 
   return (
     <section className="ranking-page hall-of-fame-page">
       <div className="hall-header">
         <span>🏆 Hall of Fame</span>
         <h1>쩝쩝 명예의 전당</h1>
-        <p>가장 많은 신뢰와 추천을 받은 리뷰어 랭킹입니다.</p>
+        <p>100위까지 확인할 수 있는 전체 리뷰어 랭킹입니다.</p>
       </div>
 
       <div className="hall-podium">
@@ -39,25 +38,27 @@ export default function RankingPage() {
       <div className="hall-board">
         <div className="hall-board-title">
           <h2>전체 랭킹</h2>
-          <span>TOP {rankings.length}</span>
+          <span>TOP 100</span>
         </div>
 
-        {rankings.map((r, i) => (
-          <button className={`hall-row rank-${i + 1}`} key={r.name}>
-            <div className="hall-rank-number">{i + 1}</div>
-            <div className="hall-user">
-              <span>{r.icon}</span>
-              <strong>{r.name}</strong>
-            </div>
-            <div className="hall-score">{r.kg}kg</div>
-          </button>
-        ))}
+        <div className="hall-ranking-scroll">
+          {fullRankings.map((r) => (
+            <button className={`hall-row rank-${r.rank}`} key={r.rank}>
+              <div className="hall-rank-number">{r.rank}</div>
 
-        {rest.length > 0 && (
-          <p className="hall-note">
-            상위권 리뷰어일수록 추천 수, 신뢰도, 활동량이 높게 반영됩니다.
-          </p>
-        )}
+              <div className="hall-user">
+                <span>{r.icon}</span>
+                <strong>{r.name}</strong>
+              </div>
+
+              <div className="hall-score">{r.kg}kg</div>
+            </button>
+          ))}
+        </div>
+
+        <p className="hall-note">
+          상위권 리뷰어일수록 추천 수, 신뢰도, 활동량이 높게 반영됩니다.
+        </p>
       </div>
     </section>
   );
