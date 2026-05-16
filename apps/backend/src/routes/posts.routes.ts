@@ -17,6 +17,7 @@ export function registerPostsRoutes(app: Express) {
     japanese: "일식",
     pub: "술집"
   };
+  const categorySlugByName = Object.fromEntries(Object.entries(categoryNameBySlug).map(([slug, name]) => [name, slug]));
 
   const resolveTargetUserId = (req: Request, res: Response) => {
     const requester = requireAuth(req, res);
@@ -75,6 +76,27 @@ export function registerPostsRoutes(app: Express) {
     );
 
     return result.rows[0]?.id ?? null;
+  };
+
+  const removePostActionsFromMemory = (postId: string) => {
+    let removedLikes = 0;
+    let removedScraps = 0;
+
+    for (let index = postLikes.length - 1; index >= 0; index -= 1) {
+      if (postLikes[index].postId === postId) {
+        postLikes.splice(index, 1);
+        removedLikes += 1;
+      }
+    }
+
+    for (let index = postScraps.length - 1; index >= 0; index -= 1) {
+      if (postScraps[index].postId === postId) {
+        postScraps.splice(index, 1);
+        removedScraps += 1;
+      }
+    }
+
+    return { removedLikes, removedScraps };
   };
 
   const ensureDbRestaurant = async (restaurantId: string) => {
@@ -200,38 +222,101 @@ export function registerPostsRoutes(app: Express) {
     });
   });
 
-  register(app, "get", "/posts", (req: Request, res: Response) => {
+  register(app, "get", "/posts", async (req: Request, res: Response) => {
     const q = normalizeText(req.query.q);
     const categoryId = normalizeText(req.query.category);
     const page = parsePage(req.query.page, 1);
     const limit = parseLimit(req.query.limit, 10);
     const sort = normalizeText(req.query.sort);
 
-    let filtered = posts.filter((post) => post.status !== "deleted");
+    const memoryPosts = posts.filter((post) => post.status !== "deleted").map(serializePost);
+    let dbPosts: typeof memoryPosts = [];
+    const pool = getPool();
+
+    if (pool) {
+      const result = await pool.query<{
+        id: string;
+        user_id: string;
+        restaurant_id: string;
+        category_name: string | null;
+        title: string;
+        content: string;
+        average_rating: string;
+        review_count: number;
+        photo_count: number;
+        like_count: number;
+        status: "published" | "draft" | "deleted";
+        created_at: string | Date;
+        updated_at: string | Date;
+        restaurant_name: string | null;
+        photos: string[];
+      }>(
+        `select p.id,
+                p.user_id,
+                p.restaurant_id,
+                c.name as category_name,
+                p.title,
+                p.content,
+                p.average_rating,
+                p.review_count,
+                p.photo_count,
+                p.like_count,
+                p.status,
+                p.created_at,
+                p.updated_at,
+                r.name as restaurant_name,
+                p.photos
+         from posts p
+         left join categories c on c.id = p.category_id
+         left join restaurants r on r.id = p.restaurant_id
+         where p.status <> 'deleted'`
+      );
+
+      dbPosts = result.rows.map((post) => ({
+        id: post.id,
+        user_id: post.user_id,
+        restaurant_id: post.restaurant_id,
+        category_id: post.category_name ? categorySlugByName[post.category_name] ?? post.category_name : "",
+        title: post.title,
+        content: post.content,
+        average_rating: Number(post.average_rating),
+        review_count: post.review_count,
+        photo_count: post.photo_count,
+        like_count: post.like_count,
+        status: post.status,
+        created_at: new Date(post.created_at).toISOString(),
+        updated_at: new Date(post.updated_at).toISOString(),
+        restaurant_name: post.restaurant_name ?? post.restaurant_id,
+        photos: post.photos ?? []
+      }));
+    }
+
+    let filtered = [...memoryPosts, ...dbPosts].filter(
+      (post, index, source) => source.findIndex((candidate) => candidate.id === post.id) === index
+    );
 
     if (q) {
       const lower = q.toLowerCase();
       filtered = filtered.filter((post) => {
-        const restaurant = restaurants.find((candidate) => candidate.id === post.restaurantId);
-        return [post.title, post.content, restaurant?.name ?? ""].some((value) => value.toLowerCase().includes(lower));
+        return [post.title, post.content, post.restaurant_name ?? ""].some((value) => value.toLowerCase().includes(lower));
       });
     }
 
     if (categoryId) {
-      filtered = filtered.filter((post) => post.categoryId === categoryId);
+      filtered = filtered.filter((post) => post.category_id === categoryId);
     }
 
     if (sort === "popular") {
-      filtered = [...filtered].sort((left, right) => right.likeCount - left.likeCount || right.reviewCount - left.reviewCount);
+      filtered = [...filtered].sort((left, right) => right.like_count - left.like_count || right.review_count - left.review_count);
     } else if (sort === "rating") {
-      filtered = [...filtered].sort((left, right) => right.averageRating - left.averageRating || right.reviewCount - left.reviewCount);
+      filtered = [...filtered].sort((left, right) => right.average_rating - left.average_rating || right.review_count - left.review_count);
     } else {
-      filtered = [...filtered].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+      filtered = [...filtered].sort((left, right) => right.created_at.localeCompare(left.created_at));
     }
 
     const total = filtered.length;
     const offset = (page - 1) * limit;
-    const pageItems = filtered.slice(offset, offset + limit).map(serializePost);
+    const pageItems = filtered.slice(offset, offset + limit);
 
     res.json({
       posts: pageItems,
@@ -609,6 +694,19 @@ export function registerPostsRoutes(app: Express) {
     }
 
     post.updatedAt = nowIso();
+    const pool = getPool();
+    if (pool) {
+      await pool.query(
+        `update posts
+         set title = $1,
+             content = $2,
+             photos = $3::text[],
+             photo_count = $4,
+             updated_at = now()
+         where id = $5`,
+        [post.title, post.content, post.photos, post.photoCount, post.id]
+      );
+    }
     res.json({ post: serializePost(post) });
   });
 
@@ -639,8 +737,34 @@ export function registerPostsRoutes(app: Express) {
         return;
       }
 
-      await pool.query(`update posts set status = 'deleted', updated_at = now() where id = $1`, [req.params.postId]);
-      res.json({ ok: true });
+      const likeCountResult = await pool.query<{ count: string }>(
+        `select count(*)::text as count from post_likes where post_id = $1`,
+        [req.params.postId]
+      );
+      const removedLikes = Number(likeCountResult.rows[0]?.count ?? 0);
+
+      await pool.query("begin");
+      try {
+        await pool.query(`delete from post_likes where post_id = $1`, [req.params.postId]);
+        await pool.query(`delete from post_scraps where post_id = $1`, [req.params.postId]);
+        const authorResult = await pool.query<{ kg_score: number }>(
+          `update users
+           set kg_score = greatest(0, kg_score - $1),
+               trust_score = greatest(0, kg_score - $1)
+           where id = $2
+           returning kg_score`,
+          [removedLikes * 10, existing.rows[0].user_id]
+        );
+        const titleId = await getDbTitleId(authorResult.rows[0]?.kg_score ?? 0);
+        await pool.query(`update users set title_id = $1 where id = $2`, [titleId, existing.rows[0].user_id]);
+        await pool.query(`update posts set status = 'deleted', like_count = 0, updated_at = now() where id = $1`, [req.params.postId]);
+        await pool.query("commit");
+      } catch (error) {
+        await pool.query("rollback");
+        throw error;
+      }
+
+      res.json({ ok: true, removedLikes });
       return;
     }
 
@@ -649,15 +773,37 @@ export function registerPostsRoutes(app: Express) {
       return;
     }
 
+    const removedActions = removePostActionsFromMemory(post.id);
+    const previousLikeCount = Math.max(post.likeCount, removedActions.removedLikes);
+
     post.status = "deleted";
     post.updatedAt = nowIso();
-    updateUserScore(user.id, -(10 + post.photoCount * 3));
+    post.likeCount = 0;
+    updateUserScore(user.id, -(10 + post.photoCount * 3 + previousLikeCount * 10));
     recalculateUserTrust(user.id);
     const pool = getPool();
     if (pool) {
-      await pool.query(`update posts set status = 'deleted', updated_at = now() where id = $1`, [post.id]);
+      await pool.query("begin");
+      try {
+        await pool.query(`delete from post_likes where post_id = $1`, [post.id]);
+        await pool.query(`delete from post_scraps where post_id = $1`, [post.id]);
+        const titleId = await getDbTitleId(user.kgScore);
+        await pool.query(
+          `update users
+           set kg_score = $1,
+               trust_score = $1,
+               title_id = $2
+           where id = $3`,
+          [user.kgScore, titleId, user.id]
+        );
+        await pool.query(`update posts set status = 'deleted', like_count = 0, updated_at = now() where id = $1`, [post.id]);
+        await pool.query("commit");
+      } catch (error) {
+        await pool.query("rollback");
+        throw error;
+      }
     }
-    res.json({ ok: true });
+    res.json({ ok: true, removedLikes: previousLikeCount, removedScraps: removedActions.removedScraps });
   });
 
   register(app, "post", "/posts/:postId/like", async (req: Request<{ postId: string }>, res: Response) => {
@@ -688,8 +834,7 @@ export function registerPostsRoutes(app: Express) {
     postLikes.push({ userId: user.id, postId: post.id, createdAt });
     const postAuthor = users.find((candidate) => candidate.id === post.userId);
     if (postAuthor) {
-      updateUserScore(post.userId, 1, 0);
-      recalculateUserTrust(post.userId);
+      updateUserScore(post.userId, 10, 0);
     }
 
     const pool = getPool();
@@ -710,6 +855,16 @@ export function registerPostsRoutes(app: Express) {
       if (postAuthor) {
         const titleId = await getDbTitleId(postAuthor.kgScore);
         await pool.query(`update users set kg_score = $1, title_id = $2 where id = $3`, [postAuthor.kgScore, titleId, postAuthor.id]);
+      } else {
+        const authorResult = await pool.query<{ kg_score: number }>(
+          `update users
+           set kg_score = kg_score + 10
+           where id = $1
+           returning kg_score`,
+          [post.userId]
+        );
+        const titleId = await getDbTitleId(authorResult.rows[0]?.kg_score ?? 0);
+        await pool.query(`update users set title_id = $1 where id = $2`, [titleId, post.userId]);
       }
     }
 
@@ -738,6 +893,7 @@ export function registerPostsRoutes(app: Express) {
 
     if (previousLength !== postLikes.length) {
       post.likeCount = Math.max(0, post.likeCount - 1);
+      updateUserScore(post.userId, -10, 0);
     }
 
     const pool = getPool();
@@ -748,6 +904,21 @@ export function registerPostsRoutes(app: Express) {
         [user.id, post.id]
       );
       await pool.query(`update posts set like_count = $1, updated_at = now() where id = $2`, [post.likeCount, post.id]);
+      const postAuthor = users.find((candidate) => candidate.id === post.userId);
+      if (postAuthor) {
+        const titleId = await getDbTitleId(postAuthor.kgScore);
+        await pool.query(`update users set kg_score = $1, title_id = $2 where id = $3`, [postAuthor.kgScore, titleId, postAuthor.id]);
+      } else {
+        const authorResult = await pool.query<{ kg_score: number }>(
+          `update users
+           set kg_score = greatest(0, kg_score - 10)
+           where id = $1
+           returning kg_score`,
+          [post.userId]
+        );
+        const titleId = await getDbTitleId(authorResult.rows[0]?.kg_score ?? 0);
+        await pool.query(`update users set title_id = $1 where id = $2`, [titleId, post.userId]);
+      }
     }
 
     res.json({ ok: true, likeCount: post.likeCount, removed: previousLength !== postLikes.length });
@@ -812,7 +983,32 @@ export function registerPostsRoutes(app: Express) {
 
     const post = posts.find((candidate) => candidate.id === req.params.postId && candidate.status !== "deleted");
     if (!post) {
-      res.status(404).json({ error: "post_not_found" });
+      const pool = getPool();
+      if (!pool) {
+        res.status(404).json({ error: "post_not_found" });
+        return;
+      }
+
+      const existing = await pool.query<{ id: string }>(
+        `select id from posts where id = $1 and status <> 'deleted' limit 1`,
+        [req.params.postId]
+      );
+      if (!existing.rows[0]) {
+        await pool.query(
+          `delete from post_scraps
+           where user_id = $1 and post_id = $2`,
+          [user.id, req.params.postId]
+        );
+        res.json({ ok: true, removed: true });
+        return;
+      }
+
+      const result = await pool.query(
+        `delete from post_scraps
+         where user_id = $1 and post_id = $2`,
+        [user.id, req.params.postId]
+      );
+      res.json({ ok: true, removed: (result.rowCount ?? 0) > 0 });
       return;
     }
 
@@ -898,7 +1094,7 @@ export function registerPostsRoutes(app: Express) {
     res.json({ posts: userPosts });
   });
 
-  register(app, "get", "/users/clip", (req: Request, res: Response) => {
+  register(app, "get", "/users/clip", async (req: Request, res: Response) => {
     const targetUserId = resolveTargetUserId(req, res);
     if (!targetUserId) {
       return;
@@ -919,7 +1115,50 @@ export function registerPostsRoutes(app: Express) {
         photos: post.photos
       }));
 
-    res.json({ clips });
+    let dbClips: typeof clips = [];
+    const pool = getPool();
+    if (pool) {
+      const result = await pool.query<{
+        post_id: string;
+        restaurant_id: string;
+        category_name: string | null;
+        restaurant_name: string | null;
+        title: string;
+        content: string;
+        photos: string[];
+      }>(
+        `select p.id as post_id,
+                p.restaurant_id,
+                c.name as category_name,
+                r.name as restaurant_name,
+                p.title,
+                p.content,
+                p.photos
+         from post_scraps ps
+         join posts p on p.id = ps.post_id
+         left join categories c on c.id = p.category_id
+         left join restaurants r on r.id = p.restaurant_id
+         where ps.user_id = $1 and p.status <> 'deleted'
+         order by ps.created_at desc`,
+        [targetUserId]
+      );
+
+      dbClips = result.rows.map((post) => ({
+        post_id: post.post_id,
+        restaurant_id: post.restaurant_id,
+        category_id: post.category_name ?? "",
+        restaurant_name: post.restaurant_name ?? post.restaurant_id,
+        title: post.title,
+        content: post.content,
+        photos: post.photos ?? []
+      }));
+    }
+
+    const mergedClips = [...clips, ...dbClips].filter(
+      (clip, index, source) => source.findIndex((candidate) => candidate.post_id === clip.post_id) === index
+    );
+
+    res.json({ clips: mergedClips });
   });
 
   register(app, "get", "/users/recommended", async (req: Request, res: Response) => {
@@ -942,7 +1181,7 @@ export function registerPostsRoutes(app: Express) {
     }
 
     const uniquePostIds = [...new Set(likedPostIds)];
-    const recommended = uniquePostIds
+    const memoryRecommended = uniquePostIds
       .map((postId) => posts.find((post) => post.id === postId && post.status !== "deleted"))
       .filter((post): post is Post => Boolean(post))
       .map((post) => ({
@@ -954,6 +1193,48 @@ export function registerPostsRoutes(app: Express) {
         content: post.content,
         photos: post.photos
       }));
+
+    let dbRecommended: typeof memoryRecommended = [];
+    if (pool) {
+      const result = await pool.query<{
+        post_id: string;
+        restaurant_id: string;
+        category_name: string | null;
+        restaurant_name: string | null;
+        title: string;
+        content: string;
+        photos: string[];
+      }>(
+        `select p.id as post_id,
+                p.restaurant_id,
+                c.name as category_name,
+                r.name as restaurant_name,
+                p.title,
+                p.content,
+                p.photos
+         from post_likes pl
+         join posts p on p.id = pl.post_id
+         left join categories c on c.id = p.category_id
+         left join restaurants r on r.id = p.restaurant_id
+         where pl.user_id = $1 and p.status <> 'deleted'
+         order by pl.created_at desc`,
+        [targetUserId]
+      );
+
+      dbRecommended = result.rows.map((post) => ({
+        post_id: post.post_id,
+        restaurant_id: post.restaurant_id,
+        category_id: post.category_name ?? "",
+        restaurant_name: post.restaurant_name ?? post.restaurant_id,
+        title: post.title,
+        content: post.content,
+        photos: post.photos ?? []
+      }));
+    }
+
+    const recommended = [...memoryRecommended, ...dbRecommended].filter(
+      (item, index, source) => source.findIndex((candidate) => candidate.post_id === item.post_id) === index
+    );
 
     res.json({ recommended });
   });

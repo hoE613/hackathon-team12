@@ -1,10 +1,10 @@
 export const levelThresholds = [
   { title: "새내기", minKg: 0, maxKg: 5 },
   { title: "쩝쩝 학사", minKg: 6, maxKg: 10 },
-  { title: "석사", minKg: 11, maxKg: 30 },
-  { title: "박사", minKg: 31, maxKg: 50 },
-  { title: "교수", minKg: 51, maxKg: 70 },
-  { title: "총장", minKg: 71, maxKg: 90 },
+  { title: "쩝쩝 석사", minKg: 11, maxKg: 30 },
+  { title: "쩝쩝 박사", minKg: 31, maxKg: 50 },
+  { title: "쩝쩝 교수", minKg: 51, maxKg: 70 },
+  { title: "쩝쩝 총장", minKg: 71, maxKg: 90 },
   { title: "쩝신", minKg: 91, maxKg: null },
 ];
 

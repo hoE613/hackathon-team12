@@ -8,6 +8,8 @@
     "dev": "concurrently -n backend,frontend -c green,cyan \"npm run dev --workspace apps/backend\" \"npm run dev --prefix frontend -- --host 0.0.0.0\"",
     "dev:backend": "npm run dev --workspace apps/backend",
     "dev:frontend": "npm run dev --prefix frontend -- --host 0.0.0.0",
+    "start": "npm run build && npm run start --workspace apps/backend",
+    "start:backend": "npm run start --workspace apps/backend",
     "db:start": "docker run --name jjepjep-postgres -e POSTGRES_DB=jjepjep -e POSTGRES_USER=jjepjep -e POSTGRES_PASSWORD=jjepjep_dev_password -p 5432:5432 -v jjepjep-postgres-data:/var/lib/postgresql/data -v $PWD/infra/postgres:/docker-entrypoint-initdb.d:ro -d postgres:16-alpine",
     "db:stop": "docker stop jjepjep-postgres",
     "db:remove": "docker rm jjepjep-postgres",

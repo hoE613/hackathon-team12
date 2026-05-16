@@ -34,7 +34,7 @@ const levels = [
   },
   {
     id: 3,
-    name: "석사",
+    name: "쩝쩝 석사",
     minKg: 11,
     maxKg: 30,
     range: "11kg ~ 30kg",
@@ -48,7 +48,7 @@ const levels = [
   },
   {
     id: 4,
-    name: "박사",
+    name: "쩝쩝 박사",
     minKg: 31,
     maxKg: 50,
     range: "31kg ~ 50kg",
@@ -62,7 +62,7 @@ const levels = [
   },
   {
     id: 5,
-    name: "교수",
+    name: "쩝쩝 교수",
     minKg: 51,
     maxKg: 70,
     range: "51kg ~ 70kg",
@@ -76,7 +76,7 @@ const levels = [
   },
   {
     id: 6,
-    name: "총장",
+    name: "쩝쩝 총장",
     minKg: 71,
     maxKg: 90,
     range: "71kg ~ 90kg",

@@ -12,8 +12,8 @@ export default function RankingPage() {
 
   const fullRankings = rankings.length > 0 ? rankings : [
     { rank: 1, nickname: "쩝쩝박사", kgScore: 100, title: "쩝신" },
-    { rank: 2, nickname: "미식의 신", kgScore: 90, title: "총장" },
-    { rank: 3, nickname: "맛집헌터", kgScore: 76, title: "총장" },
+    { rank: 2, nickname: "미식의 신", kgScore: 90, title: "쩝쩝 총장" },
+    { rank: 3, nickname: "맛집헌터", kgScore: 76, title: "쩝쩝 총장" },
   ];
   const topThree = fullRankings.slice(0, 3);
 

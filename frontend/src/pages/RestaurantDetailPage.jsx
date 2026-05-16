@@ -24,6 +24,8 @@ export default function RestaurantDetailPage() {
   const [status, setStatus] = useState("");
   const [isScrapped, setIsScrapped] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const [isPostMenuOpen, setIsPostMenuOpen] = useState(false);
+  const [editForm, setEditForm] = useState(null);
 
   const loadDetail = useMemo(() => async () => {
     if (!id) return;
@@ -124,6 +126,53 @@ export default function RestaurantDetailPage() {
     }
   };
 
+  const startEditPost = () => {
+    if (!post) return;
+    setEditForm({
+      title: post.title ?? "",
+      content: post.content ?? "",
+    });
+    setIsPostMenuOpen(false);
+  };
+
+  const savePostEdit = async () => {
+    if (!accessToken || !post || !editForm) return;
+
+    try {
+      await apiRequest(
+        `/posts/${post.id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            title: editForm.title,
+            content: editForm.content,
+          }),
+        },
+        accessToken
+      );
+      setEditForm(null);
+      await loadDetail();
+      setStatus("게시글을 수정했습니다.");
+    } catch (error) {
+      setStatus(`수정 실패: ${error.message}`);
+    }
+  };
+
+  const deletePost = async () => {
+    if (!accessToken || !post) return;
+
+    const confirmed = window.confirm("이 게시글을 삭제할까요?");
+    if (!confirmed) return;
+
+    try {
+      await apiRequest(`/posts/${post.id}`, { method: "DELETE" }, accessToken);
+      await refreshMe();
+      navigate("/posts", { replace: true });
+    } catch (error) {
+      setStatus(`삭제 실패: ${error.message}`);
+    }
+  };
+
   if (!post) {
     return (
       <section className="panel detail-body">
@@ -151,9 +200,29 @@ export default function RestaurantDetailPage() {
           <Bookmark fill={isScrapped ? "currentColor" : "none"} />
         </button>
 
-        <button className="floating more">
-          <MoreHorizontal />
-        </button>
+        <div className="detail-more-wrap">
+          <button
+            className="floating more"
+            onClick={() => {
+              if (!isOwnPost) {
+                setStatus("내가 쓴 글만 수정하거나 삭제할 수 있습니다.");
+                return;
+              }
+              setIsPostMenuOpen((current) => !current);
+            }}
+            aria-label="게시글 메뉴"
+            aria-expanded={isPostMenuOpen}
+          >
+            <MoreHorizontal />
+          </button>
+
+          {isPostMenuOpen && isOwnPost && (
+            <div className="post-menu detail-post-menu">
+              <button onClick={startEditPost}>수정하기</button>
+              <button className="danger" onClick={deletePost}>삭제하기</button>
+            </div>
+          )}
+        </div>
 
         <span className="image-count">1/6</span>
       </section>
@@ -193,9 +262,35 @@ export default function RestaurantDetailPage() {
           <button onClick={() => navigate("/map")}>지도보기</button>
         </div>
 
-        <p className="desc">
-          {post.content}
-        </p>
+        {editForm ? (
+          <article className="detail-edit-form">
+            <label>
+              <span>제목</span>
+              <input
+                value={editForm.title}
+                onChange={(event) => setEditForm((prev) => ({ ...prev, title: event.target.value }))}
+              />
+            </label>
+            <label>
+              <span>내용</span>
+              <textarea
+                value={editForm.content}
+                onChange={(event) => setEditForm((prev) => ({ ...prev, content: event.target.value }))}
+              />
+            </label>
+            <div>
+              <button className="primary" onClick={savePostEdit}>저장</button>
+              <button onClick={() => setEditForm(null)}>취소</button>
+            </div>
+          </article>
+        ) : (
+          <>
+            {post.title && <h2 className="detail-post-title">{post.title}</h2>}
+            <p className="desc">
+              {post.content}
+            </p>
+          </>
+        )}
 
         {status && <p className="empty-state">{status}</p>}
 

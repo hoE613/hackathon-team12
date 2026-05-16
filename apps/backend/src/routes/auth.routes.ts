@@ -82,10 +82,10 @@ const preferredCategoryNameBySlug: Record<string, string> = {
 function getDbTitleName(kgScore: number) {
   if (kgScore <= 5) return "새내기";
   if (kgScore <= 10) return "쩝쩝 학사";
-  if (kgScore <= 30) return "석사";
-  if (kgScore <= 50) return "박사";
-  if (kgScore <= 70) return "교수";
-  if (kgScore <= 90) return "총장";
+  if (kgScore <= 30) return "쩝쩝 석사";
+  if (kgScore <= 50) return "쩝쩝 박사";
+  if (kgScore <= 70) return "쩝쩝 교수";
+  if (kgScore <= 90) return "쩝쩝 총장";
   return "쩝신";
 }
 
@@ -425,14 +425,32 @@ export function registerAuthRoutes(app: Express) {
     }
 
     let postedCount = posts.filter((post) => post.userId === user.id && post.status !== "deleted").length;
-    let clipCount = postScraps.filter((action) => action.userId === user.id).length;
-    let recommendedCount = postLikes.filter((action) => action.userId === user.id).length;
+    let clipCount = postScraps.filter((action) => {
+      const post = posts.find((candidate) => candidate.id === action.postId);
+      return action.userId === user.id && Boolean(post) && post?.status !== "deleted";
+    }).length;
+    let recommendedCount = postLikes.filter((action) => {
+      const post = posts.find((candidate) => candidate.id === action.postId);
+      return action.userId === user.id && Boolean(post) && post?.status !== "deleted";
+    }).length;
     const pool = getPool();
     if (pool) {
       const [postResult, clipResult, likeResult] = await Promise.all([
         pool.query<{ count: string }>(`select count(*)::text as count from posts where user_id = $1 and status <> 'deleted'`, [user.id]),
-        pool.query<{ count: string }>(`select count(*)::text as count from post_scraps where user_id = $1`, [user.id]),
-        pool.query<{ count: string }>(`select count(*)::text as count from post_likes where user_id = $1`, [user.id])
+        pool.query<{ count: string }>(
+          `select count(*)::text as count
+           from post_scraps ps
+           join posts p on p.id = ps.post_id
+           where ps.user_id = $1 and p.status <> 'deleted'`,
+          [user.id]
+        ),
+        pool.query<{ count: string }>(
+          `select count(*)::text as count
+           from post_likes pl
+           join posts p on p.id = pl.post_id
+           where pl.user_id = $1 and p.status <> 'deleted'`,
+          [user.id]
+        )
       ]);
       postedCount = Number(postResult.rows[0]?.count ?? postedCount);
       clipCount = Number(clipResult.rows[0]?.count ?? clipCount);

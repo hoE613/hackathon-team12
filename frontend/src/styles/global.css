@@ -802,6 +802,18 @@ button {
   right: 18px;
 }
 
+.detail-more-wrap {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 8;
+}
+
+.detail-post-menu {
+  top: 68px;
+  right: 18px;
+}
+
 .image-count {
   position: absolute;
   right: 18px;
@@ -815,6 +827,51 @@ button {
 .detail-body {
   border-radius: 0 0 22px 22px;
   padding: 24px;
+}
+
+.detail-post-title {
+  margin: 18px 0 8px;
+  color: #1e1e1e;
+  font-size: 22px;
+}
+
+.detail-edit-form {
+  display: grid;
+  gap: 14px;
+  margin: 20px 0;
+  padding: 18px;
+  border: 1px solid #f1d7c6;
+  border-radius: 18px;
+  background: #fffaf5;
+}
+
+.detail-edit-form label {
+  display: grid;
+  gap: 8px;
+  color: #3b2d26;
+  font-weight: 900;
+}
+
+.detail-edit-form input,
+.detail-edit-form textarea {
+  width: 100%;
+  border: 1px solid #f1d7c6;
+  border-radius: 14px;
+  background: #fff;
+  padding: 13px 14px;
+  color: #222;
+  font: inherit;
+  font-weight: 700;
+}
+
+.detail-edit-form textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.detail-edit-form > div {
+  display: flex;
+  gap: 8px;
 }
 
 .detail-title {

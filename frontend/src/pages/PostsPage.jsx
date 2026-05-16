@@ -38,7 +38,7 @@ export default function PostsPage() {
 
   const loadPosts = () => {
     setStatus("게시글을 불러오는 중입니다.");
-    return apiRequest(`/posts?page=${currentPage}&limit=${postsPerPage}&sort=popular`)
+    return apiRequest(`/posts?page=${currentPage}&limit=${postsPerPage}&sort=latest`)
       .then((result) => {
         setPosts(result.posts ?? []);
         setTotalPosts(result.paging?.total ?? result.posts?.length ?? 0);

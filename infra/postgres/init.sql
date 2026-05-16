@@ -116,10 +116,10 @@ CREATE TABLE IF NOT EXISTS ai_recommendation_logs (
 INSERT INTO titles (name, min_kg, max_kg, description) VALUES
   ('새내기', 0, 5, '맛집 탐험을 막 시작한 새내기'),
   ('쩝쩝 학사', 6, 10, '기본 활동을 쌓아가는 쩝쩝 학사'),
-  ('석사', 11, 30, '맛집 기록 경험이 쌓인 석사'),
-  ('박사', 31, 50, '신뢰도 높은 맛집 박사'),
-  ('교수', 51, 70, '추천 영향력이 커진 교수'),
-  ('총장', 71, 90, '상위권 활동량의 총장'),
+  ('쩝쩝 석사', 11, 30, '맛집 기록 경험이 쌓인 쩝쩝 석사'),
+  ('쩝쩝 박사', 31, 50, '신뢰도 높은 쩝쩝 박사'),
+  ('쩝쩝 교수', 51, 70, '추천 영향력이 커진 쩝쩝 교수'),
+  ('쩝쩝 총장', 71, 90, '상위권 활동량의 쩝쩝 총장'),
   ('쩝신', 91, NULL, '최고 등급의 쩝신')
 ON CONFLICT (name) DO UPDATE SET
   min_kg = EXCLUDED.min_kg,
@@ -130,16 +130,16 @@ UPDATE users
 SET title_id = CASE
   WHEN kg_score BETWEEN 0 AND 5 THEN (SELECT id FROM titles WHERE name = '새내기')
   WHEN kg_score BETWEEN 6 AND 10 THEN (SELECT id FROM titles WHERE name = '쩝쩝 학사')
-  WHEN kg_score BETWEEN 11 AND 30 THEN (SELECT id FROM titles WHERE name = '석사')
-  WHEN kg_score BETWEEN 31 AND 50 THEN (SELECT id FROM titles WHERE name = '박사')
-  WHEN kg_score BETWEEN 51 AND 70 THEN (SELECT id FROM titles WHERE name = '교수')
-  WHEN kg_score BETWEEN 71 AND 90 THEN (SELECT id FROM titles WHERE name = '총장')
+  WHEN kg_score BETWEEN 11 AND 30 THEN (SELECT id FROM titles WHERE name = '쩝쩝 석사')
+  WHEN kg_score BETWEEN 31 AND 50 THEN (SELECT id FROM titles WHERE name = '쩝쩝 박사')
+  WHEN kg_score BETWEEN 51 AND 70 THEN (SELECT id FROM titles WHERE name = '쩝쩝 교수')
+  WHEN kg_score BETWEEN 71 AND 90 THEN (SELECT id FROM titles WHERE name = '쩝쩝 총장')
   ELSE (SELECT id FROM titles WHERE name = '쩝신')
 END
 WHERE title_id IS NOT NULL;
 
 DELETE FROM titles
-WHERE name IN ('입문자', '탐험가', '맛잘알', '쩝쩝러', '쩝쩝박사', '쩝쩝학사', '쩝쩝석사', '쩝쩝교수');
+WHERE name IN ('입문자', '탐험가', '맛잘알', '쩝쩝러', '쩝쩝박사', '쩝쩝학사', '쩝쩝석사', '쩝쩝교수', '석사', '박사', '교수', '총장');
 
 INSERT INTO categories (id, name, parent_id, sort_order) VALUES
   (1, '맛집', NULL, 1),

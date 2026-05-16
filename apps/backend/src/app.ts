@@ -1,5 +1,5 @@
 import cors from "cors";
-import express, { type Request, type Response } from "express";
+import express, { type NextFunction, type Request, type Response } from "express";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,6 +19,17 @@ export function createApp() {
   register(app, "get", "/health", (_req: Request, res: Response) => {
     res.json({ ok: true, service: "backend", timestamp: nowIso() });
   });
+
+  if (existsSync(frontendIndex)) {
+    app.get("/posts", (req: Request, res: Response, next: NextFunction) => {
+      const accept = req.headers.accept ?? "";
+      if (accept.includes("text/html")) {
+        res.sendFile(frontendIndex);
+        return;
+      }
+      next();
+    });
+  }
 
   registerRoutes(app);
 

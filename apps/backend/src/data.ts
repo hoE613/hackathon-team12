@@ -107,10 +107,10 @@ export type SeedResponse = {
 export const titles: Title[] = [
   { id: "title_freshman", name: "새내기", minKg: 0, maxKg: 5, badgeUrl: "/badges/title-freshman.svg", description: "맛집 탐험을 막 시작한 새내기" },
   { id: "title_bachelor", name: "쩝쩝 학사", minKg: 6, maxKg: 10, badgeUrl: "/badges/title-bachelor.svg", description: "기본 활동을 쌓아가는 쩝쩝 학사" },
-  { id: "title_master", name: "석사", minKg: 11, maxKg: 30, badgeUrl: "/badges/title-master.svg", description: "맛집 기록 경험이 쌓인 석사" },
-  { id: "title_doctor", name: "박사", minKg: 31, maxKg: 50, badgeUrl: "/badges/title-doctor.svg", description: "신뢰도 높은 맛집 박사" },
-  { id: "title_professor", name: "교수", minKg: 51, maxKg: 70, badgeUrl: "/badges/title-professor.svg", description: "추천 영향력이 커진 교수" },
-  { id: "title_president", name: "총장", minKg: 71, maxKg: 90, badgeUrl: "/badges/title-president.svg", description: "상위권 활동량의 총장" },
+  { id: "title_master", name: "쩝쩝 석사", minKg: 11, maxKg: 30, badgeUrl: "/badges/title-master.svg", description: "맛집 기록 경험이 쌓인 쩝쩝 석사" },
+  { id: "title_doctor", name: "쩝쩝 박사", minKg: 31, maxKg: 50, badgeUrl: "/badges/title-doctor.svg", description: "신뢰도 높은 쩝쩝 박사" },
+  { id: "title_professor", name: "쩝쩝 교수", minKg: 51, maxKg: 70, badgeUrl: "/badges/title-professor.svg", description: "추천 영향력이 커진 쩝쩝 교수" },
+  { id: "title_president", name: "쩝쩝 총장", minKg: 71, maxKg: 90, badgeUrl: "/badges/title-president.svg", description: "상위권 활동량의 쩝쩝 총장" },
   { id: "title_god", name: "쩝신", minKg: 91, maxKg: null, badgeUrl: "/badges/title-god.svg", description: "최고 등급의 쩝신" }
 ];
 
