@@ -108,10 +108,48 @@ export function registerPostsRoutes(app: Express) {
     );
   };
 
+  const ensureDbUser = async (userId: string) => {
+    const pool = getPool();
+    if (!pool) {
+      return true;
+    }
+
+    const user = users.find((candidate) => candidate.id === userId);
+    if (!user) {
+      return false;
+    }
+
+    const titleId = await getDbTitleId(user.kgScore);
+    const preferredCategoryIds = (
+      await Promise.all(user.preferredCategories.map((categoryId) => getDbCategoryId(categoryId)))
+    ).filter((value): value is number => typeof value === "number");
+
+    await pool.query(
+      `insert into users (id, nickname, profile_image, trust_score, kg_score, role, title_id, preferred_categories, created_at)
+       values ($1, $2, $3, $4, $5, $6, $7, $8::integer[], $9)
+       on conflict (id) do update set
+         nickname = excluded.nickname,
+         profile_image = excluded.profile_image,
+         trust_score = excluded.trust_score,
+         kg_score = excluded.kg_score,
+         role = excluded.role,
+         title_id = excluded.title_id,
+         preferred_categories = excluded.preferred_categories`,
+      [user.id, user.nickname, user.profileImage, user.trustScore, user.kgScore, user.role, titleId, preferredCategoryIds, user.createdAt]
+    );
+
+    return true;
+  };
+
   const insertDbPost = async (post: Post) => {
     const pool = getPool();
     if (!pool) {
       return true;
+    }
+
+    const userInserted = await ensureDbUser(post.userId);
+    if (!userInserted) {
+      return false;
     }
 
     await ensureDbRestaurant(post.restaurantId);
@@ -332,6 +370,12 @@ export function registerPostsRoutes(app: Express) {
     const postAuthor = users.find((candidate) => candidate.id === post.userId);
     const pool = getPool();
     if (pool) {
+      const dbInserted = await insertDbPost(post);
+      if (!dbInserted) {
+        res.status(400).json({ error: "invalid_post_for_db" });
+        return;
+      }
+
       const titleId = await getDbTitleId(postAuthor?.kgScore ?? 0);
       await pool.query(
         `insert into reviews (id, post_id, user_id, rating, content, photos, created_at, updated_at)
@@ -449,6 +493,12 @@ export function registerPostsRoutes(app: Express) {
 
     const pool = getPool();
     if (pool) {
+      const dbInserted = await insertDbPost(post);
+      if (!dbInserted) {
+        res.status(400).json({ error: "invalid_post_for_db" });
+        return;
+      }
+
       await pool.query(
         `insert into post_likes (user_id, post_id, created_at)
          values ($1, $2, $3)
@@ -465,7 +515,7 @@ export function registerPostsRoutes(app: Express) {
     res.json({ ok: true, likeCount: post.likeCount });
   });
 
-  register(app, "post", "/posts/:postId/scrap", (req: Request<{ postId: string }>, res: Response) => {
+  register(app, "post", "/posts/:postId/scrap", async (req: Request<{ postId: string }>, res: Response) => {
     const user = requireAuth(req, res);
     if (!user) {
       return;
@@ -488,7 +538,8 @@ export function registerPostsRoutes(app: Express) {
       return;
     }
 
-    postScraps.push({ userId: user.id, postId: post.id, createdAt: nowIso() });
+    const createdAt = nowIso();
+    postScraps.push({ userId: user.id, postId: post.id, createdAt });
 
     const postAuthor = users.find((candidate) => candidate.id === post.userId);
     if (postAuthor) {
@@ -496,7 +547,55 @@ export function registerPostsRoutes(app: Express) {
       recalculateUserTrust(post.userId);
     }
 
+    const pool = getPool();
+    if (pool) {
+      const dbInserted = await insertDbPost(post);
+      if (!dbInserted) {
+        res.status(400).json({ error: "invalid_post_for_db" });
+        return;
+      }
+
+      await pool.query(
+        `insert into post_scraps (user_id, post_id, created_at)
+         values ($1, $2, $3)
+         on conflict (user_id, post_id) do nothing`,
+        [user.id, post.id, createdAt]
+      );
+    }
+
     res.json({ ok: true });
+  });
+
+  register(app, "delete", "/posts/:postId/scrap", async (req: Request<{ postId: string }>, res: Response) => {
+    const user = requireAuth(req, res);
+    if (!user) {
+      return;
+    }
+
+    const post = posts.find((candidate) => candidate.id === req.params.postId && candidate.status !== "deleted");
+    if (!post) {
+      res.status(404).json({ error: "post_not_found" });
+      return;
+    }
+
+    const previousLength = postScraps.length;
+    for (let index = postScraps.length - 1; index >= 0; index -= 1) {
+      const scrap = postScraps[index];
+      if (scrap.userId === user.id && scrap.postId === post.id) {
+        postScraps.splice(index, 1);
+      }
+    }
+
+    const pool = getPool();
+    if (pool) {
+      await pool.query(
+        `delete from post_scraps
+         where user_id = $1 and post_id = $2`,
+        [user.id, post.id]
+      );
+    }
+
+    res.json({ ok: true, removed: previousLength !== postScraps.length });
   });
 
   register(app, "get", "/users/posts", (req: Request, res: Response) => {
@@ -508,8 +607,10 @@ export function registerPostsRoutes(app: Express) {
     const userPosts = posts
       .filter((post) => post.userId === targetUserId && post.status !== "deleted")
       .map((post) => ({
+        post_id: post.id,
         restaurant_id: post.restaurantId,
         category_id: post.categoryId,
+        restaurant_name: restaurants.find((restaurant) => restaurant.id === post.restaurantId)?.name ?? post.restaurantId,
         title: post.title,
         content: post.content,
         photos: post.photos
@@ -530,8 +631,10 @@ export function registerPostsRoutes(app: Express) {
       .map((postId) => posts.find((post) => post.id === postId && post.status !== "deleted"))
       .filter((post): post is Post => Boolean(post))
       .map((post) => ({
+        post_id: post.id,
         restaurant_id: post.restaurantId,
         category_id: post.categoryId,
+        restaurant_name: restaurants.find((restaurant) => restaurant.id === post.restaurantId)?.name ?? post.restaurantId,
         title: post.title,
         content: post.content,
         photos: post.photos

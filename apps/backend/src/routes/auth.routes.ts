@@ -80,11 +80,13 @@ const preferredCategoryNameBySlug: Record<string, string> = {
 };
 
 function getDbTitleName(kgScore: number) {
-  if (kgScore <= 9) return "입문자";
-  if (kgScore <= 29) return "탐험가";
-  if (kgScore <= 49) return "맛잘알";
-  if (kgScore <= 99) return "쩝쩝러";
-  return "쩝쩝박사";
+  if (kgScore <= 5) return "새내기";
+  if (kgScore <= 10) return "쩝쩝 학사";
+  if (kgScore <= 30) return "석사";
+  if (kgScore <= 50) return "박사";
+  if (kgScore <= 70) return "교수";
+  if (kgScore <= 90) return "총장";
+  return "쩝신";
 }
 
 async function getDbTitleId(pool: NonNullable<ReturnType<typeof getPool>>, kgScore: number) {

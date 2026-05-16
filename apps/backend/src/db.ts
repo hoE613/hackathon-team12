@@ -55,6 +55,16 @@ const developmentAccounts = [
   }
 ];
 
+const titleDefinitions = [
+  { name: "새내기", minKg: 0, maxKg: 5, description: "맛집 탐험을 막 시작한 새내기" },
+  { name: "쩝쩝 학사", minKg: 6, maxKg: 10, description: "기본 활동을 쌓아가는 쩝쩝 학사" },
+  { name: "석사", minKg: 11, maxKg: 30, description: "맛집 기록 경험이 쌓인 석사" },
+  { name: "박사", minKg: 31, maxKg: 50, description: "신뢰도 높은 맛집 박사" },
+  { name: "교수", minKg: 51, maxKg: 70, description: "추천 영향력이 커진 교수" },
+  { name: "총장", minKg: 71, maxKg: 90, description: "상위권 활동량의 총장" },
+  { name: "쩝신", minKg: 91, maxKg: null, description: "최고 등급의 쩝신" }
+];
+
 export function getPool() {
   if (pool) {
     return pool;
@@ -79,6 +89,7 @@ export async function ensureDatabaseSchema() {
 
   await activePool.query(`alter table if exists titles alter column max_kg drop not null`);
   await activePool.query(`alter table if exists users add column if not exists role text not null default 'user'`);
+  await ensureTitleDefinitions(activePool);
   await activePool.query(`
     create table if not exists post_likes (
       user_id text not null references users(id),
@@ -97,7 +108,40 @@ export async function ensureDatabaseSchema() {
   `);
   await activePool.query(`create unique index if not exists reviews_post_user_idx on reviews(post_id, user_id)`);
   await ensureDevelopmentAccounts(activePool);
+  await ensureTitleDefinitions(activePool);
   return true;
+}
+
+async function ensureTitleDefinitions(activePool: pg.Pool) {
+  for (const title of titleDefinitions) {
+    await activePool.query(
+      `insert into titles (name, min_kg, max_kg, description)
+       values ($1, $2, $3, $4)
+       on conflict (name) do update set
+         min_kg = excluded.min_kg,
+         max_kg = excluded.max_kg,
+         description = excluded.description`,
+      [title.name, title.minKg, title.maxKg, title.description]
+    );
+  }
+
+  await activePool.query(`
+    update users
+    set title_id = coalesce((
+      select id
+      from titles
+      where users.kg_score >= min_kg and (max_kg is null or users.kg_score <= max_kg)
+        and name = any($1::text[])
+      order by min_kg asc
+      limit 1
+    ), (select id from titles where name = '쩝신' limit 1))
+  `, [titleDefinitions.map((title) => title.name)]);
+
+  await activePool.query(
+    `delete from titles
+     where name = any($1::text[])`,
+    [["입문자", "탐험가", "맛잘알", "쩝쩝러", "쩝쩝박사", "쩝쩝학사", "쩝쩝석사", "쩝쩝교수"]]
+  );
 }
 
 async function ensureDevelopmentAccounts(activePool: pg.Pool) {
@@ -120,7 +164,7 @@ async function ensureDevelopmentAccounts(activePool: pg.Pool) {
          50,
          0,
          'user',
-         (select id from titles where name = '입문자' limit 1),
+         (select id from titles where name = '새내기' limit 1),
          $3::integer[]
        )
        on conflict (id) do update set

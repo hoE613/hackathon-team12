@@ -105,11 +105,13 @@ export type SeedResponse = {
 };
 
 export const titles: Title[] = [
-  { id: "title_beg", name: "입문자", minKg: 0, maxKg: 9, badgeUrl: "/badges/title-beg.svg", description: "첫 발을 뗀 쩝쩝러" },
-  { id: "title_exp", name: "탐험가", minKg: 10, maxKg: 29, badgeUrl: "/badges/title-exp.svg", description: "새로운 맛집을 넓게 탐색" },
-  { id: "title_taste", name: "맛잘알", minKg: 30, maxKg: 49, badgeUrl: "/badges/title-taste.svg", description: "맛의 기준이 있는 사용자" },
-  { id: "title_eater", name: "쩝쩝러", minKg: 50, maxKg: 99, badgeUrl: "/badges/title-eater.svg", description: "자주 기록하고 추천하는 사용자" },
-  { id: "title_master", name: "쩝쩝박사", minKg: 100, maxKg: null, badgeUrl: "/badges/title-master.svg", description: "누적 활동이 높은 핵심 유저" }
+  { id: "title_freshman", name: "새내기", minKg: 0, maxKg: 5, badgeUrl: "/badges/title-freshman.svg", description: "맛집 탐험을 막 시작한 새내기" },
+  { id: "title_bachelor", name: "쩝쩝 학사", minKg: 6, maxKg: 10, badgeUrl: "/badges/title-bachelor.svg", description: "기본 활동을 쌓아가는 쩝쩝 학사" },
+  { id: "title_master", name: "석사", minKg: 11, maxKg: 30, badgeUrl: "/badges/title-master.svg", description: "맛집 기록 경험이 쌓인 석사" },
+  { id: "title_doctor", name: "박사", minKg: 31, maxKg: 50, badgeUrl: "/badges/title-doctor.svg", description: "신뢰도 높은 맛집 박사" },
+  { id: "title_professor", name: "교수", minKg: 51, maxKg: 70, badgeUrl: "/badges/title-professor.svg", description: "추천 영향력이 커진 교수" },
+  { id: "title_president", name: "총장", minKg: 71, maxKg: 90, badgeUrl: "/badges/title-president.svg", description: "상위권 활동량의 총장" },
+  { id: "title_god", name: "쩝신", minKg: 91, maxKg: null, badgeUrl: "/badges/title-god.svg", description: "최고 등급의 쩝신" }
 ];
 
 export const categories: Category[] = [
@@ -252,7 +254,7 @@ export const aiRecommendations: AiRecommendation[] = [
 ];
 
 export function resolveTitle(kgScore: number): Title {
-  return titles.find((title) => kgScore >= title.minKg && (title.maxKg === null || kgScore <= title.maxKg)) ?? titles[0];
+  return titles.find((title) => kgScore >= title.minKg && (title.maxKg === null || kgScore <= title.maxKg)) ?? titles[titles.length - 1];
 }
 
 export function buildUserRankings(sourceUsers: User[] = users): RankingItem[] {
