@@ -12,6 +12,7 @@ import {
   Send,
   Sparkles,
   Minimize2,
+  Menu,
 } from "lucide-react";
 
 const navs = [
@@ -24,8 +25,11 @@ const navs = [
 
 export default function AppLayout() {
   const navigate = useNavigate();
+
   const [scrolled, setScrolled] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantMinimized, setAssistantMinimized] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [message, setMessage] = useState("");
 
   const [messages, setMessages] = useState([
@@ -68,6 +72,24 @@ export default function AppLayout() {
     setMessage("");
   };
 
+  const openAssistant = () => {
+    setAssistantOpen(true);
+    setAssistantMinimized(false);
+  };
+
+  const minimizeAssistant = () => {
+    setAssistantMinimized(true);
+  };
+
+  const closeAssistant = () => {
+    setAssistantOpen(false);
+    setAssistantMinimized(false);
+  };
+
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+  };
+
   return (
     <div className="app-shell">
       <aside className="left-sidebar">
@@ -102,6 +124,13 @@ export default function AppLayout() {
 
       <main className="main-area">
         <header className={`topbar ${scrolled ? "topbar-scrolled" : ""}`}>
+          <button
+            className="mobile-menu-button"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            <Menu size={24} />
+          </button>
+
           <button className="mobile-logo" onClick={() => navigate("/")}>
             🧑‍🍳 쩝쩝박사
           </button>
@@ -127,10 +156,7 @@ export default function AppLayout() {
             <Bell size={20} />
           </button>
 
-          <button
-            className="ai-assistant-chip"
-            onClick={() => setAssistantOpen(true)}
-          >
+          <button className="ai-assistant-chip" onClick={openAssistant}>
             <Sparkles size={18} />
             <span>쩝쩝비서</span>
           </button>
@@ -139,28 +165,23 @@ export default function AppLayout() {
         <Outlet />
       </main>
 
-      {assistantOpen && (
+      {assistantOpen && !assistantMinimized && (
         <div className="assistant-chat">
           <div className="assistant-chat-header">
-            <button
-              className="assistant-back"
-              onClick={() => setAssistantOpen(false)}
-            >
+            <button className="assistant-back" onClick={minimizeAssistant}>
               <Minimize2 size={18} />
             </button>
 
             <div className="assistant-profile">
               <div className="assistant-avatar">🤖</div>
+
               <div>
                 <b>쩝쩝비서</b>
                 <span>AI 맛집 추천 도우미</span>
               </div>
             </div>
 
-            <button
-              className="assistant-close"
-              onClick={() => setAssistantOpen(false)}
-            >
+            <button className="assistant-close" onClick={closeAssistant}>
               <X size={20} />
             </button>
           </div>
@@ -182,9 +203,11 @@ export default function AppLayout() {
             <button onClick={() => setMessage("가성비 좋은 맛집 추천해줘")}>
               가성비 맛집
             </button>
+
             <button onClick={() => setMessage("혼밥하기 좋은 곳 알려줘")}>
               혼밥 추천
             </button>
+
             <button onClick={() => setMessage("데이트하기 좋은 카페 추천해줘")}>
               데이트 카페
             </button>
@@ -204,6 +227,68 @@ export default function AppLayout() {
               <Send size={18} />
             </button>
           </div>
+        </div>
+      )}
+
+      {assistantOpen && assistantMinimized && (
+        <button
+          className="assistant-mini-bubble"
+          onClick={() => setAssistantMinimized(false)}
+        >
+          <span>🤖</span>
+          <b>쩝쩝비서</b>
+        </button>
+      )}
+
+      {mobileMenuOpen && (
+        <div className="mobile-menu-overlay" onClick={closeMobileMenu}>
+          <aside
+            className="mobile-side-menu"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="brand large brand-button"
+              onClick={() => {
+                navigate("/");
+                closeMobileMenu();
+              }}
+            >
+              🧑‍🍳 <b>쩝쩝박사</b>
+            </button>
+
+            <div className="mascot-card">
+              <div className="mascot">🧑‍🍳</div>
+              <h2>쩝쩝박사</h2>
+              <p>가천대 맛집, 우리가 리뷰한다! 🧡</p>
+            </div>
+
+            <nav className="side-nav">
+              {navs.map(({ label, path, icon: Icon }) => (
+                <button
+                  key={path}
+                  onClick={() => {
+                    navigate(path);
+                    closeMobileMenu();
+                  }}
+                >
+                  <Icon size={19} />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </nav>
+
+            <button
+              className="guide-card"
+              onClick={() => {
+                navigate("/verified");
+                closeMobileMenu();
+              }}
+            >
+              <b>✨ 인증 맛집이란?</b>
+              <span>영수증 인증을 완료한 맛집이에요!</span>
+              <em>자세히 보기</em>
+            </button>
+          </aside>
         </div>
       )}
     </div>
