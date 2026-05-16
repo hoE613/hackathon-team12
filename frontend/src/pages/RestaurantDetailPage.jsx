@@ -17,11 +17,13 @@ export default function RestaurantDetailPage() {
   const { id } = useParams();
 
   const navigate = useNavigate();
-  const { accessToken, user } = useAuth();
+  const { accessToken, user, refreshMe } = useAuth();
   const [detail, setDetail] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewForm, setReviewForm] = useState({ rating: 5, content: "" });
   const [status, setStatus] = useState("");
+  const [isScrapped, setIsScrapped] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
 
   const loadDetail = useMemo(() => async () => {
     if (!id) return;
@@ -43,6 +45,27 @@ export default function RestaurantDetailPage() {
     loadDetail();
   }, [loadDetail]);
 
+  useEffect(() => {
+    if (!accessToken || !id) {
+      setIsScrapped(false);
+      setIsLiked(false);
+      return;
+    }
+
+    Promise.all([
+      apiRequest("/users/clip", { method: "GET" }, accessToken),
+      apiRequest("/users/recommended", { method: "GET" }, accessToken),
+    ])
+      .then(([clipResult, recommendedResult]) => {
+        setIsScrapped((clipResult.clips ?? []).some((clip) => clip.post_id === id));
+        setIsLiked((recommendedResult.recommended ?? []).some((item) => item.post_id === id));
+      })
+      .catch(() => {
+        setIsScrapped(false);
+        setIsLiked(false);
+      });
+  }, [accessToken, id]);
+
   const post = detail?.post;
   const author = detail?.author;
   const heroImage = post?.photos?.[0] || `https://picsum.photos/seed/${id}/900/520`;
@@ -51,7 +74,12 @@ export default function RestaurantDetailPage() {
   const handleLike = async () => {
     if (!accessToken || !post) return;
     try {
-      await apiRequest(`/posts/${post.id}/like`, { method: "POST" }, accessToken);
+      const method = isLiked ? "DELETE" : "POST";
+      const result = await apiRequest(`/posts/${post.id}/like`, { method }, accessToken);
+      setIsLiked(!isLiked);
+      setDetail((prev) => prev ? { ...prev, like_count: result.likeCount ?? prev.like_count } : prev);
+      await refreshMe();
+      setStatus(isLiked ? "추천을 취소했습니다." : "추천한 글에 추가했습니다.");
       loadDetail();
     } catch (error) {
       setStatus(`추천 실패: ${error.message}`);
@@ -61,8 +89,11 @@ export default function RestaurantDetailPage() {
   const handleScrap = async () => {
     if (!accessToken || !post) return;
     try {
-      await apiRequest(`/posts/${post.id}/scrap`, { method: "POST" }, accessToken);
-      setStatus("북마크 완료");
+      const method = isScrapped ? "DELETE" : "POST";
+      await apiRequest(`/posts/${post.id}/scrap`, { method }, accessToken);
+      setIsScrapped(!isScrapped);
+      await refreshMe();
+      setStatus(isScrapped ? "북마크를 취소했습니다." : "북마크 완료");
     } catch (error) {
       setStatus(`북마크 실패: ${error.message}`);
     }
@@ -111,8 +142,13 @@ export default function RestaurantDetailPage() {
           <ArrowLeft />
         </button>
 
-        <button className="floating bookmark" onClick={handleScrap}>
-          <Bookmark />
+        <button
+          className={`floating bookmark detail-bookmark-button ${isScrapped ? "active" : ""}`}
+          onClick={handleScrap}
+          aria-label={isScrapped ? "북마크 취소" : "북마크"}
+          aria-pressed={isScrapped}
+        >
+          <Bookmark fill={isScrapped ? "currentColor" : "none"} />
         </button>
 
         <button className="floating more">
@@ -188,39 +224,59 @@ export default function RestaurantDetailPage() {
         ))}
 
         {!isOwnPost && (
-          <article className="detail-review">
+          <article className="detail-review review-write-card">
             <div className="reviewer">
               <b>리뷰 작성</b>
             </div>
-            <label>
-              평점
-              <input
-                type="number"
-                min="1"
-                max="5"
-                value={reviewForm.rating}
-                onChange={(event) => setReviewForm((prev) => ({ ...prev, rating: event.target.value }))}
-              />
-            </label>
-            <label>
-              내용
+            <div className="rating-input-row">
+              <span>평점</span>
+              <div className="half-star-rating" aria-label={`평점 ${reviewForm.rating}점`}>
+                {[1, 2, 3, 4, 5].map((star) => {
+                  const fill = Number(reviewForm.rating) >= star ? 100 : Number(reviewForm.rating) >= star - 0.5 ? 50 : 0;
+
+                  return (
+                    <span className="star-control" key={star}>
+                      <span className="star-icon" style={{ "--fill": `${fill}%` }}>★</span>
+                      <button
+                        type="button"
+                        aria-label={`${star - 0.5}점`}
+                        onClick={() => setReviewForm((prev) => ({ ...prev, rating: star - 0.5 }))}
+                      />
+                      <button
+                        type="button"
+                        aria-label={`${star}점`}
+                        onClick={() => setReviewForm((prev) => ({ ...prev, rating: star }))}
+                      />
+                    </span>
+                  );
+                })}
+              </div>
+              <strong>{reviewForm.rating}점</strong>
+            </div>
+            <label className="review-content-field">
+              <span>내용</span>
               <textarea
                 value={reviewForm.content}
                 onChange={(event) => setReviewForm((prev) => ({ ...prev, content: event.target.value }))}
                 placeholder="리뷰 내용을 입력하세요"
               />
             </label>
-            <button onClick={handleReview}>리뷰 등록</button>
+            <button className="primary review-submit-button" onClick={handleReview}>리뷰 등록</button>
           </article>
         )}
 
         <div className="detail-actions">
-          <button className="primary" onClick={handleLike}>
-            추천하기 {detail.like_count}
+          <button className={`primary like-toggle-button ${isLiked ? "active" : ""}`} onClick={handleLike}>
+            {isLiked ? "추천 취소" : "추천하기"} {detail.like_count}
           </button>
 
-          <button onClick={handleScrap}>
-            <Bookmark />
+          <button
+            className={`detail-bookmark-button ${isScrapped ? "active" : ""}`}
+            onClick={handleScrap}
+            aria-label={isScrapped ? "북마크 취소" : "북마크"}
+            aria-pressed={isScrapped}
+          >
+            <Bookmark fill={isScrapped ? "currentColor" : "none"} />
           </button>
         </div>
       </section>

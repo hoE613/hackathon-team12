@@ -12,6 +12,8 @@ export default function PostsPage() {
   const [posts, setPosts] = useState([]);
   const [totalPosts, setTotalPosts] = useState(0);
   const [bookmarkedPosts, setBookmarkedPosts] = useState([]);
+  const [openMenuPostId, setOpenMenuPostId] = useState(null);
+  const [editingPost, setEditingPost] = useState(null);
   const [status, setStatus] = useState("");
 
   useEffect(() => {
@@ -34,15 +36,19 @@ export default function PostsPage() {
     };
   }, []);
 
-  useEffect(() => {
+  const loadPosts = () => {
     setStatus("게시글을 불러오는 중입니다.");
-    apiRequest(`/posts?page=${currentPage}&limit=${postsPerPage}&sort=popular`)
+    return apiRequest(`/posts?page=${currentPage}&limit=${postsPerPage}&sort=popular`)
       .then((result) => {
         setPosts(result.posts ?? []);
         setTotalPosts(result.paging?.total ?? result.posts?.length ?? 0);
         setStatus("");
       })
       .catch((error) => setStatus(`게시글 로딩 실패: ${error.message}`));
+  };
+
+  useEffect(() => {
+    loadPosts();
   }, [currentPage, postsPerPage]);
 
   useEffect(() => {
@@ -101,6 +107,52 @@ export default function PostsPage() {
     }
   };
 
+  const startEdit = (post) => {
+    setEditingPost({
+      id: post.id,
+      title: post.title,
+      content: post.content,
+    });
+    setOpenMenuPostId(null);
+  };
+
+  const saveEdit = async () => {
+    if (!accessToken || !editingPost) return;
+
+    try {
+      await apiRequest(
+        `/posts/${editingPost.id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            title: editingPost.title,
+            content: editingPost.content,
+          }),
+        },
+        accessToken
+      );
+      setEditingPost(null);
+      await loadPosts();
+      setStatus("게시글을 수정했습니다.");
+    } catch (error) {
+      setStatus(`수정 실패: ${error.message}`);
+    }
+  };
+
+  const deletePost = async (postId) => {
+    if (!accessToken) return;
+
+    try {
+      await apiRequest(`/posts/${postId}`, { method: "DELETE" }, accessToken);
+      setOpenMenuPostId(null);
+      await refreshMe();
+      await loadPosts();
+      setStatus("게시글을 삭제했습니다.");
+    } catch (error) {
+      setStatus(`삭제 실패: ${error.message}`);
+    }
+  };
+
   return (
     <section className="panel posts-page">
       <div className="posts-header">
@@ -113,33 +165,86 @@ export default function PostsPage() {
       <div className="posts-list">
         {currentPosts.map((post) => {
           const isBookmarked = bookmarkedPosts.includes(post.id);
+          const isEditing = editingPost?.id === post.id;
 
           return (
-            <article className="post-card" key={post.id}>
+            <article
+              className="post-card clickable-post-card"
+              key={post.id}
+              onClick={() => navigate(`/restaurant/${post.id}`)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  navigate(`/restaurant/${post.id}`);
+                }
+              }}
+            >
               <div className="post-card-top">
                 <span>{post.category_id}</span>
 
-                <button
-                  className={`bookmark-button ${isBookmarked ? "active" : ""}`}
-                  aria-label={isBookmarked ? "북마크 취소" : "북마크"}
-                  aria-pressed={isBookmarked}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    toggleBookmark(post.id);
-                  }}
-                >
-                  {isBookmarked ? "★" : "☆"}
-                </button>
+                <div className="post-card-tools">
+                  <button
+                    className={`bookmark-button ${isBookmarked ? "active" : ""}`}
+                    aria-label={isBookmarked ? "북마크 취소" : "북마크"}
+                    aria-pressed={isBookmarked}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleBookmark(post.id);
+                    }}
+                  >
+                    {isBookmarked ? "★" : "☆"}
+                  </button>
+
+                  <div className="post-menu-wrap">
+                    <button
+                      className="post-more-button"
+                      aria-label="게시글 메뉴"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setOpenMenuPostId((current) => (current === post.id ? null : post.id));
+                      }}
+                    >
+                      ...
+                    </button>
+
+                    {openMenuPostId === post.id && (
+                      <div className="post-menu" onClick={(event) => event.stopPropagation()}>
+                        <button onClick={() => startEdit(post)}>수정하기</button>
+                        <button className="danger" onClick={() => deletePost(post.id)}>삭제하기</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <h2 onClick={() => navigate(`/restaurant/${post.id}`)}>{post.title}</h2>
+              {isEditing ? (
+                <div className="post-edit-form" onClick={(event) => event.stopPropagation()}>
+                  <input
+                    value={editingPost.title}
+                    onChange={(event) => setEditingPost((prev) => ({ ...prev, title: event.target.value }))}
+                  />
+                  <textarea
+                    value={editingPost.content}
+                    onChange={(event) => setEditingPost((prev) => ({ ...prev, content: event.target.value }))}
+                  />
+                  <div>
+                    <button className="primary" onClick={saveEdit}>저장</button>
+                    <button onClick={() => setEditingPost(null)}>취소</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h2>{post.title}</h2>
 
-              <p>{post.content}</p>
+                  <p>{post.content}</p>
 
-              <div className="post-meta">
-                <b>{post.restaurant_name}</b>
-                <em>평점 {post.average_rating} · 리뷰 {post.review_count} · 추천 {post.like_count}</em>
-              </div>
+                  <div className="post-meta">
+                    <b>{post.restaurant_name}</b>
+                    <em>평점 {post.average_rating} · 리뷰 {post.review_count} · 추천 {post.like_count}</em>
+                  </div>
+                </>
+              )}
             </article>
           );
         })}

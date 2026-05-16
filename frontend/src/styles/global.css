@@ -686,6 +686,43 @@ button {
   border-radius: 999px;
 }
 
+.level-segment-gauge {
+  display: grid;
+  grid-template-columns: repeat(var(--segment-count), minmax(4px, 1fr));
+  gap: clamp(3px, 0.55vw, 8px);
+  width: 100%;
+  min-height: 14px;
+  margin: 14px 0 10px;
+}
+
+.level-segment-gauge i {
+  display: block;
+  height: 14px;
+  min-width: 0;
+  border-radius: 999px;
+  background: #ffe0cc;
+  box-shadow: inset 0 0 0 1px rgba(255, 107, 0, 0.08);
+  transition: background 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.level-segment-gauge i.filled {
+  background: linear-gradient(180deg, #ff8a1f, #ff5f00);
+  box-shadow: 0 6px 12px rgba(255, 107, 0, 0.2);
+}
+
+.level-segment-gauge i.filled:last-of-type {
+  transform: scaleY(1.16);
+}
+
+.level-page-gauge {
+  min-height: 18px;
+  margin: 18px 0 10px;
+}
+
+.level-page-gauge i {
+  height: 18px;
+}
+
 .quick-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -838,6 +875,111 @@ button {
   padding: 18px 0;
 }
 
+.review-write-card {
+  display: grid;
+  gap: 18px;
+  border: 1px solid #f1e2d6;
+  border-radius: 18px;
+  background: #fffaf5;
+  padding: 22px;
+}
+
+.rating-input-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.rating-input-row > span,
+.review-content-field > span {
+  color: #222;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.half-star-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.star-control {
+  position: relative;
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+}
+
+.star-icon {
+  color: transparent;
+  font-size: 32px;
+  line-height: 1;
+  background: linear-gradient(90deg, #ff6b00 var(--fill), #ffd9bd var(--fill));
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 3px 5px rgba(255, 107, 0, 0.18));
+}
+
+.star-control button {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  border-radius: 0;
+  background: transparent;
+}
+
+.star-control button:first-of-type {
+  left: 0;
+}
+
+.star-control button:last-of-type {
+  right: 0;
+}
+
+.rating-input-row strong {
+  color: #ff6b00;
+  font-size: 17px;
+}
+
+.review-content-field {
+  display: grid;
+  gap: 10px;
+}
+
+.review-content-field textarea {
+  width: 100%;
+  min-height: 160px;
+  resize: vertical;
+  border: 1px solid #f1d7c6;
+  border-radius: 16px;
+  background: #fff;
+  padding: 16px;
+  color: #222;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.review-content-field textarea:focus {
+  outline: 3px solid rgba(255, 107, 0, 0.16);
+  border-color: #ff8a1f;
+}
+
+.review-submit-button {
+  justify-self: start;
+  min-width: 136px;
+  box-shadow: 0 12px 22px rgba(255, 80, 0, 0.22);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.review-submit-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 5px 10px rgba(255, 80, 0, 0.22);
+}
+
 .reviewer {
   display: flex;
   align-items: center;
@@ -859,6 +1001,31 @@ button {
 .detail-actions > button:last-child {
   background: #fff3e8;
   border-radius: 14px;
+}
+
+.detail-bookmark-button {
+  color: #222;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.detail-bookmark-button.active {
+  background: #fff;
+  color: #ff6b00;
+  box-shadow: inset 0 0 0 2px rgba(255, 107, 0, 0.24), 0 10px 22px rgba(255, 107, 0, 0.22);
+}
+
+.detail-bookmark-button.active svg {
+  stroke-width: 2.8;
+}
+
+.detail-bookmark-button:active,
+.like-toggle-button:active {
+  transform: translateY(2px);
+}
+
+.like-toggle-button.active {
+  background: linear-gradient(135deg, #2f2a26, #171412);
+  box-shadow: 0 10px 20px rgba(23, 20, 18, 0.18);
 }
 
 .login-page {
@@ -3060,6 +3227,28 @@ button {
   line-height: 1.5;
 }
 
+.empty-list-state {
+  display: grid;
+  gap: 8px;
+  place-items: center;
+  min-height: 180px;
+  border: 1px dashed #f0d5c3;
+  border-radius: 18px;
+  background: #fffaf7;
+  color: #5f4a40;
+  text-align: center;
+}
+
+.empty-list-state strong {
+  color: #2a211c;
+  font-size: 18px;
+}
+
+.empty-list-state small {
+  color: #8b7469;
+  font-weight: 700;
+}
+
 .user-chip,
 .logout-chip {
   border: 1px solid #f0d5c3;
@@ -3245,6 +3434,15 @@ button {
   transition: all 0.2s ease;
 }
 
+.clickable-post-card {
+  cursor: pointer;
+}
+
+.clickable-post-card:focus-visible {
+  outline: 3px solid rgba(255, 107, 0, 0.28);
+  outline-offset: 3px;
+}
+
 .post-card:hover {
   background: #fff0e2;
   transform: translateY(-3px);
@@ -3255,6 +3453,92 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.post-card-tools {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.post-menu-wrap {
+  position: relative;
+}
+
+.post-more-button {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #fff;
+  color: #5a463b;
+  font-size: 18px;
+  font-weight: 1000;
+  line-height: 1;
+}
+
+.post-more-button:hover {
+  background: #fff0e2;
+  color: #ff6b00;
+}
+
+.post-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  min-width: 132px;
+  padding: 8px;
+  border: 1px solid #f1d7c6;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 16px 30px rgba(42, 33, 28, 0.14);
+}
+
+.post-menu button {
+  padding: 11px 12px;
+  border-radius: 10px;
+  color: #3b2d26;
+  font-weight: 900;
+  text-align: left;
+}
+
+.post-menu button:hover {
+  background: #fff0e2;
+  color: #ff6b00;
+}
+
+.post-menu button.danger {
+  color: #d9361f;
+}
+
+.post-edit-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.post-edit-form input,
+.post-edit-form textarea {
+  width: 100%;
+  border: 1px solid #f1d7c6;
+  border-radius: 14px;
+  background: #fff;
+  padding: 13px 14px;
+  color: #222;
+  font: inherit;
+  font-weight: 700;
+}
+
+.post-edit-form textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.post-edit-form > div {
+  display: flex;
+  gap: 8px;
 }
 
 .post-card-top span {

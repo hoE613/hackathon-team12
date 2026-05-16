@@ -2,22 +2,32 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RestaurantGrid, ReviewRankingList } from "../components/Cards.jsx";
 
-import { activities } from "../data/dummyData";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { apiRequest } from "../api/client.js";
+import { getLevelProgress } from "../utils/levels.js";
+import LevelGauge from "../components/LevelGauge.jsx";
 
 export default function GenericPage({ title, subtitle, type }) {
   const navigate = useNavigate();
   const { accessToken, user } = useAuth();
   const [userItems, setUserItems] = useState([]);
   const [status, setStatus] = useState("");
+  const kg = user?.kg_score ?? user?.kg ?? 0;
+  const levelProgress = getLevelProgress(kg);
+  const emptyMessageByType = {
+    "my-posts": "아직 작성한 게시글이 없습니다.",
+    activity: "아직 최근 활동이 없습니다.",
+    saved: "아직 북마크한 게시글이 없습니다.",
+    recommended: "아직 추천한 게시글이 없습니다.",
+  };
 
   useEffect(() => {
     if (!accessToken) return;
 
     const pathByType = {
-      activity: "/users/posts",
+      "my-posts": "/users/posts",
       saved: "/users/clip",
+      recommended: "/users/recommended",
     };
     const path = pathByType[type];
     if (!path) return;
@@ -25,7 +35,7 @@ export default function GenericPage({ title, subtitle, type }) {
     setStatus("내 데이터를 불러오는 중입니다.");
     apiRequest(path, { method: "GET" }, accessToken)
       .then((result) => {
-        setUserItems(result.posts ?? result.clips ?? []);
+        setUserItems(result.posts ?? result.clips ?? result.recommended ?? []);
         setStatus("");
       })
       .catch((error) => setStatus(`내 데이터 로딩 실패: ${error.message}`));
@@ -65,42 +75,48 @@ export default function GenericPage({ title, subtitle, type }) {
         <div className="trust-box standalone">
           <small>내 신뢰도 점수</small>
 
-          <b>{user?.trust_score ?? 0}점</b>
+          <b>{kg}kg</b>
 
-          <div className="progress">
-            <i style={{ width: "78%" }} />
-          </div>
+          <LevelGauge levelProgress={levelProgress} />
 
-          <small>다음 레벨까지 2kg!</small>
+          <small>{levelProgress.next ? `다음 레벨까지 ${levelProgress.remainingKg}kg` : "최고 레벨 구간입니다."}</small>
         </div>
       )}
 
       {type === "reviews" && <ReviewRankingList limit={3} />}
 
-      {(type === "activity" || type === "saved") &&
-        (userItems.length > 0 ? userItems : activities).map((a, index) => (
-          <button
-            className="activity-row static"
-            key={a.post_id ?? a.title ?? a.restaurant ?? index}
-            onClick={() => {
-              if (a.post_id) {
-                navigate(`/restaurant/${a.post_id}`);
-              }
-            }}
-          >
-            <img src={a.image ?? `https://picsum.photos/seed/${a.title ?? a.restaurant ?? index}/240/180`} />
+      {(type === "my-posts" || type === "activity" || type === "saved" || type === "recommended") && (
+        userItems.length > 0 ? (
+          userItems.map((a, index) => (
+            <button
+              className="activity-row static"
+              key={a.post_id ?? a.title ?? index}
+              onClick={() => {
+                if (a.post_id) {
+                  navigate(`/restaurant/${a.post_id}`);
+                }
+              }}
+            >
+              <img src={a.image ?? `https://picsum.photos/seed/${a.title ?? index}/240/180`} />
 
-            <span>
-              <b>{a.title ?? a.restaurant}</b>
+              <span>
+                <b>{a.title}</b>
 
-              <small>
-                {a.restaurant_name ? `${a.restaurant_name} · ${a.category_id}` : a.category_id ?? `⭐ ${a.rating} · 댓글 ${a.comment}`}
-              </small>
-            </span>
+                <small>
+                  {a.restaurant_name ? `${a.restaurant_name} · ${a.category_id}` : a.category_id}
+                </small>
+              </span>
 
-            <em>{a.date ?? "DB"}</em>
-          </button>
-        ))}
+              <em>DB</em>
+            </button>
+          ))
+        ) : (
+          <div className="empty-list-state">
+            <strong>{emptyMessageByType[type]}</strong>
+            <small>게시글을 둘러보고 활동을 시작해보세요.</small>
+          </div>
+        )
+      )}
     </section>
   );
 }

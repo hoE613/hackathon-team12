@@ -11,7 +11,7 @@ const restaurantOptions = [
 
 export default function ReviewWritePage() {
   const navigate = useNavigate();
-  const { accessToken } = useAuth();
+  const { accessToken, refreshMe } = useAuth();
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({
     title: "",
@@ -80,6 +80,7 @@ export default function ReviewWritePage() {
         },
         accessToken
       );
+      await refreshMe();
       navigate(`/restaurant/${result.postId}`);
     } catch (error) {
       setStatus(`등록 실패: ${error.message}`);

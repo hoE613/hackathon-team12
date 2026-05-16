@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS reviews (
   id text PRIMARY KEY,
   post_id text NOT NULL REFERENCES posts(id),
   user_id text NOT NULL REFERENCES users(id),
-  rating integer NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  rating numeric(2, 1) NOT NULL CHECK (rating >= 0.5 AND rating <= 5),
   content text NOT NULL,
   photos text[] NOT NULL DEFAULT '{}',
   created_at timestamptz NOT NULL DEFAULT now(),

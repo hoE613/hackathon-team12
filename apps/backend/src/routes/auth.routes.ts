@@ -418,15 +418,26 @@ export function registerAuthRoutes(app: Express) {
     res.json({ ok: true });
   });
 
-  register(app, "get", "/users/me", (req: Request, res: Response) => {
+  register(app, "get", "/users/me", async (req: Request, res: Response) => {
     const user = requireAuth(req, res);
     if (!user) {
       return;
     }
 
-    const postedCount = posts.filter((post) => post.userId === user.id && post.status !== "deleted").length;
-    const clipCount = postScraps.filter((action) => action.userId === user.id).length;
-    const recommendedCount = postLikes.filter((action) => action.userId === user.id).length;
+    let postedCount = posts.filter((post) => post.userId === user.id && post.status !== "deleted").length;
+    let clipCount = postScraps.filter((action) => action.userId === user.id).length;
+    let recommendedCount = postLikes.filter((action) => action.userId === user.id).length;
+    const pool = getPool();
+    if (pool) {
+      const [postResult, clipResult, likeResult] = await Promise.all([
+        pool.query<{ count: string }>(`select count(*)::text as count from posts where user_id = $1 and status <> 'deleted'`, [user.id]),
+        pool.query<{ count: string }>(`select count(*)::text as count from post_scraps where user_id = $1`, [user.id]),
+        pool.query<{ count: string }>(`select count(*)::text as count from post_likes where user_id = $1`, [user.id])
+      ]);
+      postedCount = Number(postResult.rows[0]?.count ?? postedCount);
+      clipCount = Number(clipResult.rows[0]?.count ?? clipCount);
+      recommendedCount = Number(likeResult.rows[0]?.count ?? recommendedCount);
+    }
     const serializedUser = serializeUser(user);
 
     res.json({

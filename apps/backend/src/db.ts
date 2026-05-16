@@ -89,6 +89,18 @@ export async function ensureDatabaseSchema() {
 
   await activePool.query(`alter table if exists titles alter column max_kg drop not null`);
   await activePool.query(`alter table if exists users add column if not exists role text not null default 'user'`);
+  await activePool.query(`alter table if exists reviews drop constraint if exists reviews_rating_check`);
+  await activePool.query(`alter table if exists reviews alter column rating type numeric(2, 1) using rating::numeric`);
+  await activePool.query(`
+    do $$
+    begin
+      if to_regclass('public.reviews') is not null then
+        alter table reviews add constraint reviews_rating_check check (rating >= 0.5 and rating <= 5);
+      end if;
+    exception
+      when duplicate_object then null;
+    end $$;
+  `);
   await ensureTitleDefinitions(activePool);
   await activePool.query(`
     create table if not exists post_likes (

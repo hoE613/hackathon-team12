@@ -83,9 +83,9 @@ export default function App() {
           path="/recommended"
           element={
             <GenericPage
-              title="추천 맛집"
-              subtitle="사용자 추천수가 높은 맛집입니다."
-              type="cards"
+              title="추천한 글"
+              subtitle="내가 추천한 게시글을 확인합니다."
+              type="recommended"
             />
           }
         />
@@ -123,6 +123,17 @@ export default function App() {
               title="북마크"
               subtitle="저장한 맛집과 게시글을 확인하는 페이지입니다."
               type="saved"
+            />
+          }
+        />
+
+        <Route
+          path="/my/posts"
+          element={
+            <GenericPage
+              title="내가 쓴 글"
+              subtitle="내가 작성한 게시글을 확인합니다."
+              type="my-posts"
             />
           }
         />

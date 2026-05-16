@@ -6,7 +6,7 @@ export function serializeUser(user: User) {
     id: user.id,
     nickname: user.nickname,
     profile_image: user.profileImage,
-    trust_score: user.trustScore,
+    trust_score: user.kgScore,
     kg_score: user.kgScore,
     role: user.role,
     title: title.name,

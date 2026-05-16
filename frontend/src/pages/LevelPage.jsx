@@ -1,5 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
+import { getLevelProgress } from "../utils/levels.js";
+import LevelGauge from "../components/LevelGauge.jsx";
 
 const levels = [
   {
@@ -108,7 +110,7 @@ export default function LevelPage() {
   const currentKg = user?.kg_score ?? 0;
   const currentLevel = levels.find((level) => currentKg >= level.minKg && currentKg <= level.maxKg) ?? levels[levels.length - 1];
   const nextLevel = levels.find((level) => level.minKg > currentKg);
-  const progress = Math.min(100, currentKg);
+  const levelProgress = getLevelProgress(currentKg);
 
   return (
     <section className="level-page">
@@ -150,11 +152,9 @@ export default function LevelPage() {
           </p>
         </div>
 
-        <div className="level-progress-bar">
-          <i style={{ width: `${progress}%` }} />
-        </div>
+        <LevelGauge levelProgress={levelProgress} className="level-page-gauge" />
 
-        <span>{nextLevel ? `다음 레벨까지 ${Math.max(0, nextLevel.minKg - currentKg)}kg 남았어요.` : "최고 레벨 구간입니다."}</span>
+        <span>{nextLevel ? `다음 레벨까지 ${levelProgress.remainingKg}kg 남았어요.` : "최고 레벨 구간입니다."}</span>
       </div>
 
       <div className="level-guide-card">

@@ -6,6 +6,8 @@ import {
 } from "../data/dummyData";
 import { apiRequest } from "../api/client.js";
 import { useAuth } from "../auth/AuthContext.jsx";
+import { getLevelProgress } from "../utils/levels.js";
+import LevelGauge from "./LevelGauge.jsx";
 
 import {
   Star,
@@ -179,6 +181,8 @@ export function RightSidebar() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const rankings = useRankings(5);
+  const kg = user?.kg_score ?? user?.kg ?? 0;
+  const levelProgress = getLevelProgress(kg);
 
   const stats = [
     { label: "내가 쓴 글", value: user?.posted_count ?? 0, icon: "글", path: "/my/activity" },
@@ -225,13 +229,11 @@ export function RightSidebar() {
         <div className="trust-box">
           <small>내 신뢰도 점수</small>
 
-          <b>{user?.trust_score ?? 0}점</b>
+          <b>{kg}kg</b>
 
-          <div className="progress">
-            <i style={{ width: "78%" }} />
-          </div>
+          <LevelGauge levelProgress={levelProgress} />
 
-          <small>다음 레벨까지 2kg!</small>
+          <small>{levelProgress.next ? `다음 레벨까지 ${levelProgress.remainingKg}kg` : "최고 레벨 구간입니다."}</small>
         </div>
 
         <div className="quick-stats">

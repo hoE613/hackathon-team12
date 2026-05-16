@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { randomUUID } from "node:crypto";
 import { requireAuth } from "../auth.js";
-import { categories, posts, restaurants, reviews, users, type Post, type Review } from "../data.js";
+import { categories, posts, restaurants, resolveTitle, reviews, users, type Post, type Review } from "../data.js";
 import { getPool } from "../db.js";
 import { register } from "../http.js";
 import type { PostBody, ReviewBody } from "../request-types.js";
@@ -295,20 +295,162 @@ export function registerPostsRoutes(app: Express) {
     res.status(201).json({ postId: id });
   });
 
-  register(app, "get", "/posts/:postId", (req: Request<{ postId: string }>, res: Response) => {
+  register(app, "get", "/posts/:postId", async (req: Request<{ postId: string }>, res: Response) => {
     const detail = buildPostDetail(req.params.postId);
-    if (!detail) {
+    if (detail) {
+      res.json(detail);
+      return;
+    }
+
+    const pool = getPool();
+    if (!pool) {
       res.status(404).json({ error: "post_not_found" });
       return;
     }
 
-    res.json(detail);
+    const result = await pool.query<{
+      id: string;
+      user_id: string;
+      restaurant_id: string;
+      category_name: string | null;
+      title: string;
+      content: string;
+      average_rating: string;
+      review_count: number;
+      photo_count: number;
+      like_count: number;
+      status: "published" | "draft" | "deleted";
+      created_at: string;
+      updated_at: string;
+      restaurant_name: string | null;
+      photos: string[];
+      nickname: string | null;
+      profile_image: string | null;
+      trust_score: number | null;
+      kg_score: number | null;
+      role: "user" | "admin" | null;
+      preferred_categories: number[] | null;
+    }>(
+      `select p.id,
+              p.user_id,
+              p.restaurant_id,
+              c.name as category_name,
+              p.title,
+              p.content,
+              p.average_rating,
+              p.review_count,
+              p.photo_count,
+              p.like_count,
+              p.status,
+              p.created_at,
+              p.updated_at,
+              r.name as restaurant_name,
+              p.photos,
+              u.nickname,
+              u.profile_image,
+              u.trust_score,
+              u.kg_score,
+              u.role,
+              u.preferred_categories
+       from posts p
+       left join categories c on c.id = p.category_id
+       left join restaurants r on r.id = p.restaurant_id
+       left join users u on u.id = p.user_id
+       where p.id = $1 and p.status <> 'deleted'
+       limit 1`,
+      [req.params.postId]
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+      res.status(404).json({ error: "post_not_found" });
+      return;
+    }
+
+    const avgRating = Number(row.average_rating);
+    res.json({
+      post: {
+        id: row.id,
+        user_id: row.user_id,
+        restaurant_id: row.restaurant_id,
+        category_id: row.category_name ?? "",
+        title: row.title,
+        content: row.content,
+        average_rating: avgRating,
+        review_count: row.review_count,
+        photo_count: row.photo_count,
+        like_count: row.like_count,
+        status: row.status,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        restaurant_name: row.restaurant_name ?? row.restaurant_id,
+        photos: row.photos ?? []
+      },
+      author: row.nickname
+        ? {
+            id: row.user_id,
+            nickname: row.nickname,
+            profile_image: row.profile_image,
+            trust_score: row.kg_score ?? 0,
+            kg_score: row.kg_score ?? 0,
+            role: row.role ?? "user",
+            title: resolveTitle(row.kg_score ?? 0).name,
+            title_id: resolveTitle(row.kg_score ?? 0).id,
+            preferred_categories: []
+          }
+        : null,
+      avg_rating: avgRating,
+      like_count: row.like_count,
+      photos: row.photos ?? []
+    });
   });
 
-  register(app, "get", "/posts/:postId/reviews", (req: Request<{ postId: string }>, res: Response) => {
+  register(app, "get", "/posts/:postId/reviews", async (req: Request<{ postId: string }>, res: Response) => {
     const post = posts.find((candidate) => candidate.id === req.params.postId && candidate.status !== "deleted");
     if (!post) {
-      res.status(404).json({ error: "post_not_found" });
+      const pool = getPool();
+      if (!pool) {
+        res.status(404).json({ error: "post_not_found" });
+        return;
+      }
+
+      const postResult = await pool.query<{ id: string }>(
+        `select id from posts where id = $1 and status <> 'deleted' limit 1`,
+        [req.params.postId]
+      );
+      if (!postResult.rows[0]) {
+        res.status(404).json({ error: "post_not_found" });
+        return;
+      }
+
+      const reviewResult = await pool.query<{
+        id: string;
+        post_id: string;
+        user_id: string;
+        rating: string;
+        content: string;
+        photos: string[];
+        created_at: string;
+        updated_at: string;
+      }>(
+        `select id, post_id, user_id, rating, content, photos, created_at, updated_at
+         from reviews
+         where post_id = $1
+         order by created_at desc`,
+        [req.params.postId]
+      );
+      res.json({
+        reviews: reviewResult.rows.map((review) => ({
+          id: review.id,
+          post_id: review.post_id,
+          user_id: review.user_id,
+          rating: Number(review.rating),
+          content: review.content,
+          photos: review.photos ?? [],
+          created_at: review.created_at,
+          updated_at: review.updated_at
+        }))
+      });
       return;
     }
 
@@ -340,7 +482,7 @@ export function registerPostsRoutes(app: Express) {
     const rating = Number(body.rating);
     const content = normalizeText(body.content);
     const photos = Array.isArray(body.photos) ? body.photos.filter((photo) => typeof photo === "string") : [];
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5 || !content) {
+    if (!Number.isFinite(rating) || rating < 0.5 || rating > 5 || rating * 2 !== Math.round(rating * 2) || !content) {
       res.status(400).json({ error: "invalid_review_payload" });
       return;
     }
@@ -399,7 +541,7 @@ export function registerPostsRoutes(app: Express) {
     res.status(201).json({ reviewId: review.id, review: serializeReview(review) });
   });
 
-  register(app, "patch", "/posts/:postId", (req: Request<{ postId: string }>, res: Response) => {
+  register(app, "patch", "/posts/:postId", async (req: Request<{ postId: string }>, res: Response) => {
     const user = requireAuth(req, res);
     if (!user) {
       return;
@@ -407,7 +549,42 @@ export function registerPostsRoutes(app: Express) {
 
     const post = posts.find((candidate) => candidate.id === req.params.postId && candidate.status !== "deleted");
     if (!post) {
-      res.status(404).json({ error: "post_not_found" });
+      const pool = getPool();
+      if (!pool) {
+        res.status(404).json({ error: "post_not_found" });
+        return;
+      }
+
+      const existing = await pool.query<{ user_id: string }>(
+        `select user_id from posts where id = $1 and status <> 'deleted' limit 1`,
+        [req.params.postId]
+      );
+      if (!existing.rows[0]) {
+        res.status(404).json({ error: "post_not_found" });
+        return;
+      }
+      if (existing.rows[0].user_id !== user.id) {
+        res.status(403).json({ error: "forbidden" });
+        return;
+      }
+
+      const body = req.body as PostBody;
+      const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : null;
+      const content = typeof body.content === "string" && body.content.trim() ? body.content.trim() : null;
+      const photos = Array.isArray(body.photos) ? body.photos.filter((photo) => typeof photo === "string") : null;
+
+      const result = await pool.query(
+        `update posts
+         set title = coalesce($1, title),
+             content = coalesce($2, content),
+             photos = coalesce($3::text[], photos),
+             photo_count = case when $3::text[] is null then photo_count else cardinality($3::text[]) end,
+             updated_at = now()
+         where id = $4
+         returning id`,
+        [title, content, photos, req.params.postId]
+      );
+      res.json({ ok: true, postId: result.rows[0]?.id ?? req.params.postId });
       return;
     }
 
@@ -435,7 +612,7 @@ export function registerPostsRoutes(app: Express) {
     res.json({ post: serializePost(post) });
   });
 
-  register(app, "delete", "/posts/:postId", (req: Request<{ postId: string }>, res: Response) => {
+  register(app, "delete", "/posts/:postId", async (req: Request<{ postId: string }>, res: Response) => {
     const user = requireAuth(req, res);
     if (!user) {
       return;
@@ -443,7 +620,27 @@ export function registerPostsRoutes(app: Express) {
 
     const post = posts.find((candidate) => candidate.id === req.params.postId && candidate.status !== "deleted");
     if (!post) {
-      res.status(404).json({ error: "post_not_found" });
+      const pool = getPool();
+      if (!pool) {
+        res.status(404).json({ error: "post_not_found" });
+        return;
+      }
+
+      const existing = await pool.query<{ user_id: string }>(
+        `select user_id from posts where id = $1 and status <> 'deleted' limit 1`,
+        [req.params.postId]
+      );
+      if (!existing.rows[0]) {
+        res.status(404).json({ error: "post_not_found" });
+        return;
+      }
+      if (existing.rows[0].user_id !== user.id) {
+        res.status(403).json({ error: "forbidden" });
+        return;
+      }
+
+      await pool.query(`update posts set status = 'deleted', updated_at = now() where id = $1`, [req.params.postId]);
+      res.json({ ok: true });
       return;
     }
 
@@ -456,6 +653,10 @@ export function registerPostsRoutes(app: Express) {
     post.updatedAt = nowIso();
     updateUserScore(user.id, -(10 + post.photoCount * 3));
     recalculateUserTrust(user.id);
+    const pool = getPool();
+    if (pool) {
+      await pool.query(`update posts set status = 'deleted', updated_at = now() where id = $1`, [post.id]);
+    }
     res.json({ ok: true });
   });
 
@@ -513,6 +714,43 @@ export function registerPostsRoutes(app: Express) {
     }
 
     res.json({ ok: true, likeCount: post.likeCount });
+  });
+
+  register(app, "delete", "/posts/:postId/like", async (req: Request<{ postId: string }>, res: Response) => {
+    const user = requireAuth(req, res);
+    if (!user) {
+      return;
+    }
+
+    const post = posts.find((candidate) => candidate.id === req.params.postId && candidate.status !== "deleted");
+    if (!post) {
+      res.status(404).json({ error: "post_not_found" });
+      return;
+    }
+
+    const previousLength = postLikes.length;
+    for (let index = postLikes.length - 1; index >= 0; index -= 1) {
+      const like = postLikes[index];
+      if (like.userId === user.id && like.postId === post.id) {
+        postLikes.splice(index, 1);
+      }
+    }
+
+    if (previousLength !== postLikes.length) {
+      post.likeCount = Math.max(0, post.likeCount - 1);
+    }
+
+    const pool = getPool();
+    if (pool) {
+      await pool.query(
+        `delete from post_likes
+         where user_id = $1 and post_id = $2`,
+        [user.id, post.id]
+      );
+      await pool.query(`update posts set like_count = $1, updated_at = now() where id = $2`, [post.likeCount, post.id]);
+    }
+
+    res.json({ ok: true, likeCount: post.likeCount, removed: previousLength !== postLikes.length });
   });
 
   register(app, "post", "/posts/:postId/scrap", async (req: Request<{ postId: string }>, res: Response) => {
@@ -598,13 +836,13 @@ export function registerPostsRoutes(app: Express) {
     res.json({ ok: true, removed: previousLength !== postScraps.length });
   });
 
-  register(app, "get", "/users/posts", (req: Request, res: Response) => {
+  register(app, "get", "/users/posts", async (req: Request, res: Response) => {
     const targetUserId = resolveTargetUserId(req, res);
     if (!targetUserId) {
       return;
     }
 
-    const userPosts = posts
+    const memoryPosts = posts
       .filter((post) => post.userId === targetUserId && post.status !== "deleted")
       .map((post) => ({
         post_id: post.id,
@@ -615,6 +853,47 @@ export function registerPostsRoutes(app: Express) {
         content: post.content,
         photos: post.photos
       }));
+
+    let dbPosts: typeof memoryPosts = [];
+    const pool = getPool();
+    if (pool) {
+      const result = await pool.query<{
+        post_id: string;
+        restaurant_id: string;
+        category_name: string | null;
+        restaurant_name: string | null;
+        title: string;
+        content: string;
+        photos: string[];
+      }>(
+        `select p.id as post_id,
+                p.restaurant_id,
+                c.name as category_name,
+                r.name as restaurant_name,
+                p.title,
+                p.content,
+                p.photos
+         from posts p
+         left join categories c on c.id = p.category_id
+         left join restaurants r on r.id = p.restaurant_id
+         where p.user_id = $1 and p.status <> 'deleted'
+         order by p.created_at desc`,
+        [targetUserId]
+      );
+      dbPosts = result.rows.map((post) => ({
+        post_id: post.post_id,
+        restaurant_id: post.restaurant_id,
+        category_id: post.category_name ?? "",
+        restaurant_name: post.restaurant_name ?? post.restaurant_id,
+        title: post.title,
+        content: post.content,
+        photos: post.photos ?? []
+      }));
+    }
+
+    const userPosts = [...memoryPosts, ...dbPosts].filter(
+      (post, index, source) => source.findIndex((candidate) => candidate.post_id === post.post_id) === index
+    );
 
     res.json({ posts: userPosts });
   });
@@ -641,5 +920,41 @@ export function registerPostsRoutes(app: Express) {
       }));
 
     res.json({ clips });
+  });
+
+  register(app, "get", "/users/recommended", async (req: Request, res: Response) => {
+    const targetUserId = resolveTargetUserId(req, res);
+    if (!targetUserId) {
+      return;
+    }
+
+    let likedPostIds = postLikes.filter((action) => action.userId === targetUserId).map((action) => action.postId);
+    const pool = getPool();
+    if (pool) {
+      const result = await pool.query<{ post_id: string }>(
+        `select post_id
+         from post_likes
+         where user_id = $1
+         order by created_at desc`,
+        [targetUserId]
+      );
+      likedPostIds = [...likedPostIds, ...result.rows.map((row) => row.post_id)];
+    }
+
+    const uniquePostIds = [...new Set(likedPostIds)];
+    const recommended = uniquePostIds
+      .map((postId) => posts.find((post) => post.id === postId && post.status !== "deleted"))
+      .filter((post): post is Post => Boolean(post))
+      .map((post) => ({
+        post_id: post.id,
+        restaurant_id: post.restaurantId,
+        category_id: post.categoryId,
+        restaurant_name: restaurants.find((restaurant) => restaurant.id === post.restaurantId)?.name ?? post.restaurantId,
+        title: post.title,
+        content: post.content,
+        photos: post.photos
+      }));
+
+    res.json({ recommended });
   });
 }

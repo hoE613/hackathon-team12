@@ -1,19 +1,19 @@
 import { useNavigate } from "react-router-dom";
 import { activities } from "../data/dummyData";
 import { useAuth } from "../auth/AuthContext.jsx";
+import { getLevelProgress } from "../utils/levels.js";
+import LevelGauge from "../components/LevelGauge.jsx";
 
 export default function MyPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
   const kg = user?.kg_score ?? user?.kg ?? 0;
-  const trust = user?.trust_score ?? 0;
   const title = user?.title ?? "새내기";
-  const nextKg = kg <= 5 ? 6 : kg <= 10 ? 11 : kg <= 30 ? 31 : kg <= 50 ? 51 : kg <= 70 ? 71 : kg <= 90 ? 91 : kg;
-  const progress = nextKg ? Math.min(100, Math.round((kg / nextKg) * 100)) : 100;
+  const levelProgress = getLevelProgress(kg);
 
   const myStats = [
-    { label: "내가 쓴 글", value: user?.posted_count ?? 0, icon: "글", path: "/my/activity" },
+    { label: "내가 쓴 글", value: user?.posted_count ?? 0, icon: "글", path: "/my/posts" },
     { label: "북마크", value: user?.clip_count ?? 0, icon: "북", path: "/my/saved" },
     { label: "추천한 글", value: user?.recommended_count ?? 0, icon: "추", path: "/recommended" },
   ];
@@ -45,13 +45,11 @@ export default function MyPage() {
 
         <div className="my-trust-section">
           <span>내 신뢰도 점수</span>
-          <strong>{trust}점</strong>
+          <strong>{kg}kg</strong>
 
-          <div className="progress">
-            <i style={{ width: `${progress}%` }} />
-          </div>
+          <LevelGauge levelProgress={levelProgress} />
 
-          <p>{nextKg > kg ? `다음 레벨까지 ${nextKg - kg}kg` : "최고 레벨 구간입니다."}</p>
+          <p>{levelProgress.next ? `다음 레벨까지 ${levelProgress.remainingKg}kg` : "최고 레벨 구간입니다."}</p>
         </div>
 
         <div className="my-stat-grid">
