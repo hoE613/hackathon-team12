@@ -1,0 +1,23 @@
+{
+  "name": "jjepjep-secretary",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c green,cyan \"npm run dev --workspace apps/backend\" \"npm run dev --workspace apps/frontend\"",
+    "dev:backend": "npm run dev --workspace apps/backend",
+    "dev:frontend": "npm run dev --workspace apps/frontend",
+    "db:start": "docker run --name jjepjep-postgres -e POSTGRES_DB=jjepjep -e POSTGRES_USER=jjepjep -e POSTGRES_PASSWORD=jjepjep_dev_password -p 5432:5432 -v jjepjep-postgres-data:/var/lib/postgresql/data -v $PWD/infra/postgres:/docker-entrypoint-initdb.d:ro -d postgres:16-alpine",
+    "db:stop": "docker stop jjepjep-postgres",
+    "db:remove": "docker rm jjepjep-postgres",
+    "db:logs": "docker logs -f jjepjep-postgres",
+    "db:psql": "docker exec -it jjepjep-postgres psql -U jjepjep -d jjepjep",
+    "db:init": "docker exec -i jjepjep-postgres psql -U jjepjep -d jjepjep -f /docker-entrypoint-initdb.d/init.sql",
+    "build": "npm run build --workspace apps/backend && npm run build --workspace apps/frontend",
+    "typecheck": "npm run typecheck --workspace apps/backend && npm run typecheck --workspace apps/frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
