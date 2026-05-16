@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -7,6 +8,10 @@ import {
   Trophy,
   User,
   PlusCircle,
+  X,
+  Send,
+  Sparkles,
+  Minimize2,
 } from "lucide-react";
 
 const navs = [
@@ -19,13 +24,59 @@ const navs = [
 
 export default function AppLayout() {
   const navigate = useNavigate();
+  const [scrolled, setScrolled] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const [messages, setMessages] = useState([
+    {
+      type: "bot",
+      text: "안녕하세요! 저는 쩝쩝비서예요. 오늘 먹고 싶은 메뉴나 상황을 말해주시면 가천대 주변 맛집을 추천해드릴게요.",
+    },
+    {
+      type: "bot",
+      text: "예시: 혼밥하기 좋은 곳 추천해줘 / 가성비 좋은 한식 알려줘 / 데이트하기 좋은 카페 추천해줘",
+    },
+  ]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  const handleSend = () => {
+    if (!message.trim()) return;
+
+    const userText = message.trim();
+
+    setMessages((prev) => [
+      ...prev,
+      { type: "user", text: userText },
+      {
+        type: "bot",
+        text: "현재는 백엔드 연결 전이라 임시 응답이에요. 추후 AI 추천 기능이 연결되면 입력한 조건에 맞춰 맛집, 메뉴, 거리, 신뢰도 점수를 기준으로 추천해드릴 예정입니다.",
+      },
+    ]);
+
+    setMessage("");
+  };
 
   return (
     <div className="app-shell">
       <aside className="left-sidebar">
-        <div className="brand large">
+        <button
+          className="brand large brand-button"
+          onClick={() => navigate("/")}
+        >
           🧑‍🍳 <b>쩝쩝박사</b>
-        </div>
+        </button>
 
         <div className="mascot-card">
           <div className="mascot">🧑‍🍳</div>
@@ -50,7 +101,7 @@ export default function AppLayout() {
       </aside>
 
       <main className="main-area">
-        <header className="topbar">
+        <header className={`topbar ${scrolled ? "topbar-scrolled" : ""}`}>
           <button className="mobile-logo" onClick={() => navigate("/")}>
             🧑‍🍳 쩝쩝박사
           </button>
@@ -63,22 +114,98 @@ export default function AppLayout() {
             <NavLink to="/my">마이페이지</NavLink>
           </nav>
 
-          <div className="search-box" onClick={() => navigate("/search")}>
+          <div className="search-box">
             <Search size={18} />
-            <span>맛집, 메뉴, 지역을 검색해보세요</span>
+            <input
+              type="text"
+              placeholder="맛집, 메뉴, 지역을 검색해보세요"
+              onFocus={() => navigate("/search")}
+            />
           </div>
 
           <button className="icon-button">
             <Bell size={20} />
           </button>
 
-          <button className="profile-chip" onClick={() => navigate("/my")}>
-            🧑‍🍳 쩝쩝박사 48kg
+          <button
+            className="ai-assistant-chip"
+            onClick={() => setAssistantOpen(true)}
+          >
+            <Sparkles size={18} />
+            <span>쩝쩝비서</span>
           </button>
         </header>
 
         <Outlet />
       </main>
+
+      {assistantOpen && (
+        <div className="assistant-chat">
+          <div className="assistant-chat-header">
+            <button
+              className="assistant-back"
+              onClick={() => setAssistantOpen(false)}
+            >
+              <Minimize2 size={18} />
+            </button>
+
+            <div className="assistant-profile">
+              <div className="assistant-avatar">🤖</div>
+              <div>
+                <b>쩝쩝비서</b>
+                <span>AI 맛집 추천 도우미</span>
+              </div>
+            </div>
+
+            <button
+              className="assistant-close"
+              onClick={() => setAssistantOpen(false)}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="assistant-chat-body">
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                className={`chat-message ${
+                  msg.type === "user" ? "user-message" : "bot-message"
+                }`}
+              >
+                {msg.text}
+              </div>
+            ))}
+          </div>
+
+          <div className="assistant-quick-buttons">
+            <button onClick={() => setMessage("가성비 좋은 맛집 추천해줘")}>
+              가성비 맛집
+            </button>
+            <button onClick={() => setMessage("혼밥하기 좋은 곳 알려줘")}>
+              혼밥 추천
+            </button>
+            <button onClick={() => setMessage("데이트하기 좋은 카페 추천해줘")}>
+              데이트 카페
+            </button>
+          </div>
+
+          <div className="assistant-input-area">
+            <input
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSend();
+              }}
+              placeholder="쩝쩝비서에게 메시지 입력..."
+            />
+
+            <button onClick={handleSend}>
+              <Send size={18} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

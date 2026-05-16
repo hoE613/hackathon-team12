@@ -6,68 +6,79 @@ export default function MyPage() {
   const navigate = useNavigate();
 
   return (
-    <section className="my-page">
-      <div className="profile-panel wide">
-        <div className="profile-head">
-          <span>🧑‍🍳</span>
+    <section className="my-page refined-my-page">
+      <div className="my-profile-card">
+        <div className="my-profile-top">
+          <div className="my-avatar">🧑‍🍳</div>
 
-          <div>
-            <b>쩝쩝박사 48kg</b>
+          <div className="my-info">
+            <h1>쩝쩝박사 48kg</h1>
 
-            <p>맛집 히어로가 되는 중이에요!</p>
+            <button
+              className="my-level-text-link"
+              onClick={() => navigate("/my/level")}
+            >
+              맛집 히어로가 되는 중이에요!
+            </button>
           </div>
 
-          <button onClick={() => navigate("/my/profile")}>⚙️</button>
+          <button
+            className="my-setting-button"
+            onClick={() => navigate("/my/profile")}
+          >
+            ⚙️
+          </button>
         </div>
 
-        <div className="trust-box">
-          <small>내 신뢰도 점수</small>
-
-          <b>48kg</b>
+        <div className="my-trust-section">
+          <span>내 신뢰도 점수</span>
+          <strong>48kg</strong>
 
           <div className="progress">
             <i style={{ width: "78%" }} />
           </div>
 
-          <small>다음 레벨까지 2kg!</small>
+          <p>다음 레벨까지 2kg!</p>
         </div>
 
-        <div className="quick-stats">
+        <div className="my-stat-grid">
           {user.stats.map((s) => (
             <button key={s.label} onClick={() => navigate(s.path)}>
               <span>{s.icon}</span>
-
               <b>{s.label}</b>
-
               <em>{s.value}</em>
             </button>
           ))}
         </div>
       </div>
 
-      <section className="panel">
-        <h2>최근 활동</h2>
+      <div className="my-activity-card">
+        <div className="my-section-title">
+          <h2>최근 활동</h2>
+          <button onClick={() => navigate("/my/activity")}>전체 보기</button>
+        </div>
 
-        {activities.map((a) => (
-          <button
-            className="activity-row"
-            onClick={() => navigate("/my/activity")}
-            key={a.restaurant}
-          >
-            <img src={a.image} />
+        <div className="my-activity-list">
+          {activities.map((a) => (
+            <button
+              className="my-activity-item"
+              key={a.restaurant}
+              onClick={() => navigate("/my/activity")}
+            >
+              <img src={a.image} alt={a.restaurant} />
 
-            <span>
-              <b>{a.restaurant}</b>
+              <div>
+                <b>{a.restaurant}</b>
+                <span>
+                  ⭐ {a.rating} · 댓글 {a.comment}
+                </span>
+              </div>
 
-              <small>
-                ⭐ {a.rating} · 댓글 {a.comment}
-              </small>
-            </span>
-
-            <em>{a.date}</em>
-          </button>
-        ))}
-      </section>
+              <em>{a.date}</em>
+            </button>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }

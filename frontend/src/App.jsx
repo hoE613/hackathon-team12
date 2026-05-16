@@ -8,6 +8,7 @@ import RankingPage from "./pages/RankingPage.jsx";
 import MyPage from "./pages/MyPage.jsx";
 import GenericPage from "./pages/GenericPage.jsx";
 import CategoryPage from "./pages/CategoryPage.jsx";
+import LevelPage from "./pages/LevelPage.jsx";
 
 export default function App() {
   return (
@@ -124,16 +125,7 @@ export default function App() {
             />
           }
         />
-        <Route
-          path="/my/level"
-          element={
-            <GenericPage
-              title="쩝쩝 디미트 레벨 확인"
-              subtitle="현재 등급과 성장 지표를 확인합니다."
-              type="trust"
-            />
-          }
-        />
+        <Route path="/my/level" element={<LevelPage />} />
         <Route
           path="/my/reviews"
           element={
